@@ -53,7 +53,7 @@
 </head>
 <body>
 
-  <!-- 1. ログイン画面（未認証時に表示） -->
+  <!-- 1. ログイン画面（未認証時・起動時に必ず表示） -->
   <div id="login-screen" class="login-wrapper">
     <div class="login-card">
       <div style="display:flex; align-items:center; justify-content:center; margin-bottom:16px;">
@@ -69,11 +69,11 @@
       <form onsubmit="handleLogin(event)">
         <div class="form-group">
           <label>ログインID（メールアドレス）</label>
-          <input type="email" id="login-email" placeholder="example@domain.com" required>
+          <input type="email" id="login-email" placeholder="example@domain.com" required autocomplete="off">
         </div>
         <div class="form-group">
           <label>パスワード</label>
-          <input type="password" id="login-password" placeholder="••••••••" required>
+          <input type="password" id="login-password" placeholder="••••••••" required autocomplete="new-password">
         </div>
         <button type="submit" class="btn-primary" style="width:100%; padding:10px; font-size:14px; margin-top:6px;" id="btn-login-submit">
           ログイン
@@ -372,6 +372,18 @@
     let supabaseClient = null;
     let dbData = { experts: [], clients: [], projects: [], projectMembers: [], logs: [] };
 
+    // ブラウザ内に残っている過去のセッション情報をすべて消去する共通処理
+    function clearAllAuthStorage() {
+      try {
+        Object.keys(localStorage).forEach(k => {
+          if (k.startsWith('sb-') || k.includes('supabase')) localStorage.removeItem(k);
+        });
+        Object.keys(sessionStorage).forEach(k => {
+          if (k.startsWith('sb-') || k.includes('supabase')) sessionStorage.removeItem(k);
+        });
+      } catch (e) {}
+    }
+
     function initSupabase() {
       try {
         // ブラウザにログイン状態を保存しない（メモリ上のみ保持）
@@ -399,17 +411,15 @@
       document.getElementById('login-error').style.display = 'none';
     }
 
-    // ログイン状態の確認と画面切り替え
-    async function checkAuthSession() {
+    // 起動・再読み込み時に必ずログアウト状態へリセットし、ログイン画面を表示する
+    async function resetToLoginScreen() {
+      clearAllAuthStorage();
       if (!initSupabase()) return;
+      await supabaseClient.auth.signOut();
 
-      const { data: { session } } = await supabaseClient.auth.getSession();
-      if (session) {
-        enterApp(session.user);
-      } else {
-        document.getElementById('login-screen').style.display = 'flex';
-        document.getElementById('app-screen').style.display = 'none';
-      }
+      document.getElementById('login-password').value = '';
+      document.getElementById('app-screen').style.display = 'none';
+      document.getElementById('login-screen').style.display = 'flex';
     }
 
     async function handleLogin(e) {
@@ -437,13 +447,9 @@
       enterApp(data.user);
     }
 
+    // ログアウトボタン押下時の処理
     async function handleLogout() {
-      if (supabaseClient) {
-        await supabaseClient.auth.signOut();
-      }
-      document.getElementById('login-password').value = '';
-      document.getElementById('app-screen').style.display = 'none';
-      document.getElementById('login-screen').style.display = 'flex';
+      await resetToLoginScreen();
     }
 
     async function enterApp(user) {
@@ -453,12 +459,17 @@
       await fetchAllData();
     }
 
-    // ウィンドウの「×」ボタンやタブを閉じた瞬間にログアウトを実行
-    window.addEventListener('pagehide', () => {
+    // Windowsの「×」ボタン・タブ閉じ・ページ離脱時にログアウトと同じ終了処理を実行
+    function handleWindowClose() {
+      clearAllAuthStorage();
       if (supabaseClient) {
         supabaseClient.auth.signOut();
       }
-    });
+      document.getElementById('app-screen').style.display = 'none';
+      document.getElementById('login-screen').style.display = 'flex';
+    }
+    window.addEventListener('pagehide', handleWindowClose);
+    window.addEventListener('beforeunload', handleWindowClose);
 
     // 全マスタ・案件データの最新フェッチ
     async function fetchAllData() {
@@ -965,9 +976,9 @@
       a.click();
     }
 
-    // 初期起動（ログインセッション確認）
+    // 初期起動（起動・再アクセス時に必ずログイン画面へリセット）
     window.addEventListener('DOMContentLoaded', async () => {
-      await checkAuthSession();
+      await resetToLoginScreen();
     });
   </script>
 </body>
