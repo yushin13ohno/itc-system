@@ -374,11 +374,11 @@
 
     function initSupabase() {
       try {
-        // ブラウザのタブ・ウィンドウを閉じたら自動ログアウトされるよう sessionStorage を指定
+        // ブラウザにログイン状態を保存しない（メモリ上のみ保持）
         supabaseClient = supabase.createClient(DEFAULT_SUPABASE_URL, DEFAULT_SUPABASE_ANON_KEY, {
           auth: {
-            storage: window.sessionStorage,
-            persistSession: true
+            persistSession: false,
+            autoRefreshToken: false
           }
         });
         hideLoginError();
@@ -452,6 +452,13 @@
       document.getElementById('user-email-display').textContent = `👤 ${user.email}`;
       await fetchAllData();
     }
+
+    // ウィンドウの「×」ボタンやタブを閉じた瞬間にログアウトを実行
+    window.addEventListener('pagehide', () => {
+      if (supabaseClient) {
+        supabaseClient.auth.signOut();
+      }
+    });
 
     // 全マスタ・案件データの最新フェッチ
     async function fetchAllData() {
