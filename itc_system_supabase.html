@@ -374,7 +374,13 @@
 
     function initSupabase() {
       try {
-        supabaseClient = supabase.createClient(DEFAULT_SUPABASE_URL, DEFAULT_SUPABASE_ANON_KEY);
+        // ブラウザのタブ・ウィンドウを閉じたら自動ログアウトされるよう sessionStorage を指定
+        supabaseClient = supabase.createClient(DEFAULT_SUPABASE_URL, DEFAULT_SUPABASE_ANON_KEY, {
+          auth: {
+            storage: window.sessionStorage,
+            persistSession: true
+          }
+        });
         hideLoginError();
         return true;
       } catch (err) {
