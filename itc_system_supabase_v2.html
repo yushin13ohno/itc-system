@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ITコーディネータ専門家・活動管理システム (Supabase連携版)</title>
+  <!-- Supabase JS SDK (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    body { background-color: #f1f5f9; color: #1e293b; line-height: 1.5; padding-bottom: 60px; }
+    header { background: #ffffff; border-bottom: 1px solid #cbd5e1; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; flex-wrap: wrap; gap: 10px; }
+    .logo { background: #4f46e5; color: white; padding: 4px 10px; border-radius: 6px; font-weight: bold; font-size: 14px; margin-right: 8px; }
+    .header-title { font-size: 16px; font-weight: bold; color: #0f172a; display: flex; align-items: center; }
+    nav { display: flex; gap: 6px; background: #e2e8f0; padding: 4px; border-radius: 8px; }
+    nav button { border: none; background: transparent; padding: 6px 14px; font-size: 13px; font-weight: 600; color: #475569; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+    nav button.active { background: #ffffff; color: #4f46e5; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    main { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+    .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; }
+    .btn-primary { background: #4f46e5; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-primary:hover { background: #4338ca; }
+    .btn-secondary { background: #e2e8f0; color: #334155; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 500; }
+    .btn-secondary:hover { background: #cbd5e1; }
+    .btn-outline { background: white; border: 1px solid #cbd5e1; color: #475569; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+    .btn-outline:hover { background: #f8fafc; color: #1e293b; }
+    .btn-danger { background: #fee2e2; color: #dc2626; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+    .btn-danger:hover { background: #fca5a5; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+    th { background: #f8fafc; color: #475569; padding: 10px 12px; border-bottom: 2px solid #e2e8f0; font-weight: 600; }
+    td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
+    tr:hover td { background: #f8fafc; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; margin: 2px; }
+    .badge-blue { background: #e0e7ff; color: #4338ca; }
+    .badge-slate { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+    .modal-box { background: #ffffff; border-radius: 10px; width: 100%; max-width: 580px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #334155; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 14px; }
+    .kpi-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 20px; }
+    .kpi-card { background: white; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0; }
+    .kpi-num { font-size: 24px; font-weight: bold; color: #4f46e5; margin-top: 4px; }
+    .progress-bar-bg { background-color: #e2e8f0; border-radius: 9999px; height: 7px; width: 100%; overflow: hidden; margin-top: 4px; }
+    .progress-bar-fill { background-color: #4f46e5; height: 100%; border-radius: 9999px; }
+    .conn-banner { background: #fef3c7; border: 1px solid #fde68a; color: #92400e; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-title">
+      <span class="logo">ITC</span>
+      <span>ITコーディネータ活動管理 (Supabase DB接続)</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <button class="btn-outline" onclick="openConfigModal()" style="font-size:11px;">⚙️ DB接続設定</button>
+      <nav>
+        <button id="nav-projects" class="active" onclick="showTab('projects')">支援案件・体制</button>
+        <button id="nav-reports" onclick="showTab('reports')">月次稼働集計</button>
+        <button id="nav-clients" onclick="showTab('clients')">顧客マスタ</button>
+        <button id="nav-experts" onclick="showTab('experts')">専門家マスタ</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div id="conn-status-bar" class="conn-banner" style="display:none;">
+      <span id="conn-status-text">Supabase接続設定が未完了です。右上の「⚙️ DB接続設定」からURLとAnon Keyを設定してください。</span>
+      <button class="btn-secondary" onclick="openConfigModal()" style="font-size:11px;">設定を開く</button>
+    </div>
+
+    <!-- 1. 案件・体制タブ -->
+    <section id="tab-projects">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 style="font-size:16px; font-weight:bold;">支援プロジェクト一覧・体制管理</h2>
+            <p style="font-size:12px; color:#64748b;">案件CRUD、体制編成、日報入力・修正・削除を行います。</p>
+          </div>
+          <button class="btn-primary" onclick="openProjectModal()">+ 新規案件を起票</button>
+        </div>
+        <div id="projects-list-area"><div style="color:#94a3b8; padding:20px; text-align:center;">読み込み中...</div></div>
+      </div>
+    </section>
+
+    <!-- 2. 月次稼働集計タブ -->
+    <section id="tab-reports" style="display:none;">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 style="font-size:16px; font-weight:bold;">支援実績 月別・担当別集計</h2>
+            <p style="font-size:12px; color:#64748b;">選択した月の支援ログを自動集計・CSV出力します。</p>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <select id="report-month-filter" onchange="renderReports()" style="padding:6px 10px; border-radius:6px; border:1px solid #cbd5e1; font-size:12px;">
+              <!-- JSで動的生成 -->
+            </select>
+            <button class="btn-secondary" onclick="exportCSV()">選択月のCSV出力</button>
+          </div>
+        </div>
+
+        <div class="kpi-container">
+          <div class="kpi-card">
+            <div style="font-size:12px; color:#64748b;">総支援回数</div>
+            <div id="kpi-logs" class="kpi-num">0 回</div>
+          </div>
+          <div class="kpi-card">
+            <div style="font-size:12px; color:#64748b;">総稼働工数</div>
+            <div id="kpi-hours" class="kpi-num">0.0 h</div>
+          </div>
+          <div class="kpi-card">
+            <div style="font-size:12px; color:#64748b;">稼働専門家数</div>
+            <div id="kpi-experts" class="kpi-num">0 名</div>
+          </div>
+          <div class="kpi-card">
+            <div style="font-size:12px; color:#64748b;">支援先企業数</div>
+            <div id="kpi-clients" class="kpi-num">0 社</div>
+          </div>
+        </div>
+
+        <h3 style="font-size:14px; font-weight:bold; margin-bottom:8px;">■ 顧客別 稼働実績集計</h3>
+        <table style="margin-bottom:24px;">
+          <thead>
+            <tr><th>顧客名</th><th>対象案件</th><th>支援日数</th><th>月間総工数</th></tr>
+          </thead>
+          <tbody id="report-clients-tbody"></tbody>
+        </table>
+
+        <h3 style="font-size:14px; font-weight:bold; margin-bottom:8px;">■ 専門家別 稼働実績集計</h3>
+        <table>
+          <thead>
+            <tr><th>専門家氏名</th><th>担当案件</th><th>稼働日数</th><th>月間総稼働工数</th></tr>
+          </thead>
+          <tbody id="report-experts-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 3. 顧客マスタタブ -->
+    <section id="tab-clients" style="display:none;">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 style="font-size:16px; font-weight:bold;">顧客企業マスタ</h2>
+            <p style="font-size:12px; color:#64748b;">支援先企業の追加・編集・削除が可能です。</p>
+          </div>
+          <button class="btn-primary" onclick="openClientModal()">+ 顧客を追加</button>
+        </div>
+        <table>
+          <thead>
+            <tr><th>企業名</th><th>業種</th><th>担当者</th><th>連絡先</th><th style="width:140px; text-align:right;">操作</th></tr>
+          </thead>
+          <tbody id="clients-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 4. 専門家マスタタブ -->
+    <section id="tab-experts" style="display:none;">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 style="font-size:16px; font-weight:bold;">専門家マスタ（ITコーディネータ）</h2>
+            <p style="font-size:12px; color:#64748b;">登録専門家の追加・編集・削除が可能です。</p>
+          </div>
+          <button class="btn-primary" onclick="openExpertModal()">+ 専門家を登録</button>
+        </div>
+        <table>
+          <thead>
+            <tr><th>氏名 / 認定番号</th><th>所属 / 地域</th><th>得意領域・強み</th><th style="width:140px; text-align:right;">操作</th></tr>
+          </thead>
+          <tbody id="experts-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- モーダル：Supabase接続設定 -->
+  <div id="modal-config" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <h3 style="font-size:15px; font-weight:bold; margin-bottom:12px;">⚙️ Supabase データベース接続設定</h3>
+      <p style="font-size:12px; color:#64748b; margin-bottom:14px;">
+        Supabaseダッシュボードの [Project Settings] > [API] にある <b>Project URL</b> と <b>anon public key</b> を入力してください。
+      </p>
+      <form onsubmit="handleSaveConfig(event)">
+        <div class="form-group">
+          <label>Project URL</label>
+          <input type="url" id="cfg-url" placeholder="https://ijxaznscwfruvlhwtivo.supabase.co" required>
+        </div>
+        <div class="form-group">
+          <label>anon (public) API Key</label>
+          <input type="text" id="cfg-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5c..." required>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="closeAllModals()">キャンセル</button>
+          <button type="submit" class="btn-primary">接続して保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- モーダル：支援案件の登録・編集 -->
+  <div id="modal-project" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <h3 style="font-size:15px; font-weight:bold; margin-bottom:14px;" id="modal-project-title">支援案件の登録</h3>
+      <form onsubmit="handleSaveProject(event)">
+        <input type="hidden" id="prj-id">
+        <div class="form-group">
+          <label>支援先顧客 <span style="color:#ef4444;">*</span></label>
+          <select id="prj-client" required></select>
+        </div>
+        <div class="form-group">
+          <label>案件・プロジェクト名 <span style="color:#ef4444;">*</span></label>
+          <input type="text" id="prj-name" required placeholder="例: 生産管理システム刷新およびDXグランドデザイン策定">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>支援開始日 <span style="color:#ef4444;">*</span></label>
+            <input type="date" id="prj-start" required>
+          </div>
+          <div class="form-group">
+            <label>終了予定日</label>
+            <input type="date" id="prj-end">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>受注金額 (円)</label>
+            <input type="number" step="10000" id="prj-budget" placeholder="例: 1200000">
+          </div>
+          <div class="form-group">
+            <label>予定工数 (時間)</label>
+            <input type="number" step="0.5" id="prj-planned-hours" placeholder="例: 40.0">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>👑 プロジェクトリーダー (専門家) <span style="color:#ef4444;">*</span></label>
+          <select id="prj-leader" required></select>
+        </div>
+        <div class="form-group">
+          <label>👥 メンバー専門家 (複数選択)</label>
+          <div id="prj-members-box" style="border:1px solid #cbd5e1; border-radius:6px; padding:8px; max-height:100px; overflow-y:auto; background:#f8fafc;"></div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="closeAllModals()">キャンセル</button>
+          <button type="submit" class="btn-primary" id="btn-save-project">DBへ保存する</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- モーダル：日次支援ログ入力・修正 -->
+  <div id="modal-log" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <h3 style="font-size:15px; font-weight:bold; margin-bottom:4px;" id="modal-log-title">支援日報の記録</h3>
+      <p style="font-size:12px; color:#64748b; margin-bottom:14px;" id="modal-log-subtitle"></p>
+      
+      <form onsubmit="handleSaveLog(event)" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; margin-bottom:16px;">
+        <input type="hidden" id="log-p-id">
+        <input type="hidden" id="log-edit-id">
+        <div style="font-weight:bold; font-size:13px; margin-bottom:8px; color:#334155;" id="log-form-heading">＋ 新規日報の入力</div>
+        <div class="form-group">
+          <label>実施日 <span style="color:#ef4444;">*</span></label>
+          <input type="date" id="log-date" required>
+        </div>
+        <div class="form-group">
+          <label>実施した専門家 <span style="color:#ef4444;">*</span></label>
+          <select id="log-expert" required></select>
+        </div>
+        <div class="form-group">
+          <label>稼働時間 (時間) <span style="color:#ef4444;">*</span></label>
+          <input type="number" step="0.5" min="0.5" max="24" id="log-hours" value="3.0" required>
+        </div>
+        <div class="form-group">
+          <label>支援テーマ・件名 <span style="color:#ef4444;">*</span></label>
+          <input type="text" id="log-theme" placeholder="例: 生産管理システムの要件確認" required>
+        </div>
+        <div class="form-group">
+          <label>支援内容・決定事項</label>
+          <textarea id="log-content" rows="3" placeholder="討議内容や次回までの宿題を記入"></textarea>
+        </div>
+        <div class="form-actions" style="margin-top:10px; padding-top:10px;">
+          <button type="button" class="btn-secondary" id="btn-cancel-edit-log" style="display:none;" onclick="resetLogForm()">修正キャンセル</button>
+          <button type="submit" class="btn-primary" id="btn-submit-log">日報を登録</button>
+        </div>
+      </form>
+
+      <div style="border-top:1px solid #e2e8f0; padding-top:14px;">
+        <h4 style="font-size:13px; font-weight:bold; margin-bottom:8px;">これまでの活動ログ一覧（修正・削除可能）</h4>
+        <div id="modal-log-history" style="max-height:220px; overflow-y:auto; font-size:12px;"></div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; margin-top:14px;">
+        <button type="button" class="btn-secondary" onclick="closeAllModals()">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- モーダル：顧客登録・編集 -->
+  <div id="modal-client" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <h3 style="font-size:15px; font-weight:bold; margin-bottom:14px;" id="modal-client-title">顧客企業の登録</h3>
+      <form onsubmit="handleSaveClient(event)">
+        <input type="hidden" id="cli-id">
+        <div class="form-group">
+          <label>企業名 <span style="color:#ef4444;">*</span></label>
+          <input type="text" id="cli-name" required placeholder="株式会社〇〇">
+        </div>
+        <div class="form-group">
+          <label>業種</label>
+          <input type="text" id="cli-industry" placeholder="例: 金属加工・製造業">
+        </div>
+        <div class="form-group">
+          <label>担当者名</label>
+          <input type="text" id="cli-contact" placeholder="例: 総務部 佐藤様">
+        </div>
+        <div class="form-group">
+          <label>連絡先</label>
+          <input type="text" id="cli-tel" placeholder="例: 03-XXXX-XXXX">
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="closeAllModals()">キャンセル</button>
+          <button type="submit" class="btn-primary" id="btn-save-client">DBへ登録</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- モーダル：専門家登録・編集 -->
+  <div id="modal-expert" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <h3 style="font-size:15px; font-weight:bold; margin-bottom:14px;" id="modal-expert-title">専門家（ITC）の登録</h3>
+      <form onsubmit="handleSaveExpert(event)">
+        <input type="hidden" id="exp-id">
+        <div class="form-group">
+          <label>氏名 <span style="color:#ef4444;">*</span></label>
+          <input type="text" id="exp-name" required placeholder="例: 高橋 健二">
+        </div>
+        <div class="form-group">
+          <label>ITC認定番号 <span style="color:#ef4444;">*</span></label>
+          <input type="text" id="exp-cert" required placeholder="例: 9000002026C">
+        </div>
+        <div class="form-group">
+          <label>所属・屋号</label>
+          <input type="text" id="exp-org" placeholder="例: 高橋ITオフィス">
+        </div>
+        <div class="form-group">
+          <label>活動地域 (都道府県)</label>
+          <input type="text" id="exp-pref" placeholder="例: 東京都">
+        </div>
+        <div class="form-group">
+          <label>得意領域 (カンマ区切り)</label>
+          <input type="text" id="exp-specs" placeholder="例: DX戦略, 生産管理, セキュリティ">
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="closeAllModals()">キャンセル</button>
+          <button type="submit" class="btn-primary" id="btn-save-expert">DBへ登録</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let supabaseClient = null;
+    let dbData = { experts: [], clients: [], projects: [], projectMembers: [], logs: [] };
+
+    function initSupabase() {
+      const url = localStorage.getItem('itc_supabase_url');
+      const key = localStorage.getItem('itc_supabase_key');
+      const banner = document.getElementById('conn-status-bar');
+
+      if (!url || !key) {
+        banner.style.display = 'flex';
+        return false;
+      }
+
+      try {
+        supabaseClient = supabase.createClient(url, key);
+        banner.style.display = 'none';
+        return true;
+      } catch (err) {
+        banner.style.display = 'flex';
+        document.getElementById('conn-status-text').textContent = 'Supabaseクライアントの初期化に失敗しました。URLとKeyを確認してください。';
+        return false;
+      }
+    }
+
+    async function fetchAllData() {
+      if (!supabaseClient) return;
+
+      const [resExp, resCli, resPrj, resMem, resLog] = await Promise.all([
+        supabaseClient.from('experts').select('*').order('id', { ascending: true }),
+        supabaseClient.from('clients').select('*').order('id', { ascending: true }),
+        supabaseClient.from('projects').select('*').order('id', { ascending: false }),
+        supabaseClient.from('project_members').select('*'),
+        supabaseClient.from('activity_logs').select('*').order('date', { ascending: false })
+      ]);
+
+      if (resExp.error || resCli.error || resPrj.error) {
+        alert('DBからのデータ取得に失敗しました。接続設定またはテーブルが存在するか確認してください。\n' + (resExp.error?.message || resCli.error?.message || resPrj.error?.message));
+        return;
+      }
+
+      dbData.experts = resExp.data || [];
+      dbData.clients = resCli.data || [];
+      dbData.projectMembers = resMem.data || [];
+      dbData.logs = resLog.data || [];
+
+      dbData.projects = (resPrj.data || []).map(p => {
+        const mIds = dbData.projectMembers.filter(m => m.project_id === p.id).map(m => m.expert_id);
+        return {
+          id: p.id,
+          clientId: p.client_id,
+          name: p.name,
+          startDate: p.start_date,
+          endDate: p.end_date,
+          budget: p.budget,
+          plannedHours: p.planned_hours ? Number(p.planned_hours) : null,
+          leaderId: p.leader_id,
+          memberIds: mIds
+        };
+      });
+
+      updateMonthFilterOptions();
+      renderProjects();
+    }
+
+    function showTab(tabName) {
+      ['projects', 'reports', 'clients', 'experts'].forEach(t => {
+        document.getElementById('tab-' + t).style.display = (t === tabName) ? 'block' : 'none';
+        document.getElementById('nav-' + t).className = (t === tabName) ? 'active' : '';
+      });
+      if (tabName === 'projects') renderProjects();
+      if (tabName === 'reports') renderReports();
+      if (tabName === 'clients') renderClients();
+      if (tabName === 'experts') renderExperts();
+    }
+
+    function formatYen(val) {
+      if (!val && val !== 0) return '-';
+      return '¥' + Number(val).toLocaleString();
+    }
+
+    // 1. 案件管理
+    function renderProjects() {
+      const area = document.getElementById('projects-list-area');
+      area.innerHTML = '';
+
+      if (dbData.projects.length === 0) {
+        area.innerHTML = '<div style="color:#94a3b8; padding:20px; text-align:center;">登録されている案件はありません。</div>';
+        return;
+      }
+
+      dbData.projects.forEach(p => {
+        const client = dbData.clients.find(c => c.id === p.clientId) || { name: "不明" };
+        const leader = dbData.experts.find(e => e.id === p.leaderId) || { name: "未定" };
+        const pLogs = dbData.logs.filter(l => l.project_id === p.id);
+        const actualHours = pLogs.reduce((s, l) => s + Number(l.hours), 0);
+
+        const memberBadges = (p.memberIds || []).map(mid => {
+          const m = dbData.experts.find(e => e.id === mid);
+          return m ? `<span class="badge badge-slate">${m.name}</span>` : '';
+        }).join('');
+
+        let progressHtml = '';
+        if (p.plannedHours && p.plannedHours > 0) {
+          const pct = Math.min(100, Math.round((actualHours / p.plannedHours) * 100));
+          progressHtml = `
+            <div style="margin-top:6px; font-size:11px; color:#475569;">
+              進捗工数: <b>${actualHours.toFixed(1)}h</b> / 予定 <b>${p.plannedHours.toFixed(1)}h</b> (${pct}%)
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill" style="width: ${pct}%;"></div>
+              </div>
+            </div>
+          `;
+        }
+
+        const div = document.createElement('div');
+        div.style.cssText = "border:1px solid #e2e8f0; border-radius:8px; padding:16px; margin-bottom:14px; background:#ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.03);";
+        div.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+            <div style="flex:1; min-width:280px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="badge badge-blue">${client.name}</span>
+                <span style="font-size:11px; color:#64748b;">期間: ${p.startDate} 〜 ${p.endDate ? p.endDate : '未定'}</span>
+              </div>
+              <h3 style="font-size:16px; font-weight:bold; margin-top:4px; color:#0f172a;">${p.name}</h3>
+
+              <div style="display:flex; gap:16px; margin-top:6px; font-size:12px; color:#334155; flex-wrap:wrap;">
+                <div>受注金額: <b style="color:#059669;">${formatYen(p.budget)}</b></div>
+                <div>予定工数: <b>${p.plannedHours ? p.plannedHours + ' h' : '-'}</b></div>
+                <div>累計稼働: <b style="color:#4f46e5;">${actualHours.toFixed(1)} h</b> (${pLogs.length}回)</div>
+              </div>
+
+              ${progressHtml}
+
+              <div style="font-size:12px; color:#64748b; margin-top:8px;">
+                <span>👑 リーダー: <strong style="color:#1e293b;">${leader.name}</strong></span>
+                <span style="margin-left:12px;">👥 メンバー: ${memberBadges || 'なし'}</span>
+              </div>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
+              <button class="btn-primary" onclick="openLogModal(${p.id})">支援日報の記録・履歴 →</button>
+              <div style="display:flex; gap:6px; margin-top:4px;">
+                <button class="btn-outline" onclick="editProject(${p.id})">編集</button>
+                <button class="btn-danger" onclick="deleteProject(${p.id})">削除</button>
+              </div>
+            </div>
+          </div>
+        `;
+        area.appendChild(div);
+      });
+    }
+
+    // 月別選択肢の更新
+    function updateMonthFilterOptions() {
+      const select = document.getElementById('report-month-filter');
+      const currentVal = select.value || 'ALL';
+      const months = Array.from(new Set(dbData.logs.map(l => l.date ? l.date.slice(0, 7) : ''))).filter(Boolean).sort().reverse();
+
+      let options = '<option value="ALL">全期間</option>';
+      months.forEach(m => {
+        options += `<option value="${m}">${m.replace('-', '年')}月</option>`;
+      });
+
+      select.innerHTML = options;
+      if (months.includes(currentVal) || currentVal === 'ALL') {
+        select.value = currentVal;
+      } else if (months.length > 0) {
+        select.value = months[0];
+      }
+    }
+
+    // 2. 実績月報
+    function renderReports() {
+      const filterMonth = document.getElementById('report-month-filter').value;
+      const logs = dbData.logs.filter(l => {
+        if (filterMonth === 'ALL') return true;
+        return l.date.startsWith(filterMonth);
+      });
+
+      const totalH = logs.reduce((s, l) => s + Number(l.hours), 0);
+      const expSet = new Set(logs.map(l => l.expert_id));
+      const clientSet = new Set(logs.map(l => {
+        const prj = dbData.projects.find(p => p.id === l.project_id);
+        return prj ? prj.clientId : null;
+      }).filter(Boolean));
+
+      document.getElementById('kpi-logs').textContent = logs.length + ' 回';
+      document.getElementById('kpi-hours').textContent = totalH.toFixed(1) + ' h';
+      document.getElementById('kpi-experts').textContent = expSet.size + ' 名';
+      document.getElementById('kpi-clients').textContent = clientSet.size + ' 社';
+
+      // 顧客別
+      const cTbody = document.getElementById('report-clients-tbody');
+      cTbody.innerHTML = '';
+      dbData.clients.forEach(c => {
+        const prjs = dbData.projects.filter(p => p.clientId === c.id);
+        const pIds = prjs.map(p => p.id);
+        const cLogs = logs.filter(l => pIds.includes(l.project_id));
+        if (cLogs.length === 0) return;
+        const h = cLogs.reduce((s, l) => s + Number(l.hours), 0);
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><b>${c.name}</b></td>
+          <td>${prjs.map(p => p.name).join('<br>')}</td>
+          <td>${cLogs.length} 回</td>
+          <td><b>${h.toFixed(1)} h</b></td>
+        `;
+        cTbody.appendChild(tr);
+      });
+
+      // 専門家別
+      const eTbody = document.getElementById('report-experts-tbody');
+      eTbody.innerHTML = '';
+      dbData.experts.forEach(e => {
+        const eLogs = logs.filter(l => l.expert_id === e.id);
+        if (eLogs.length === 0) return;
+        const h = eLogs.reduce((s, l) => s + Number(l.hours), 0);
+        const handledPrjs = Array.from(new Set(eLogs.map(l => {
+          const prj = dbData.projects.find(p => p.id === l.project_id);
+          return prj ? prj.name : '';
+        }))).join('<br>');
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><b>${e.name}</b> (#${e.cert_number})</td>
+          <td>${handledPrjs}</td>
+          <td>${eLogs.length} 回</td>
+          <td><b style="color:#4f46e5;">${h.toFixed(1)} h</b></td>
+        `;
+        eTbody.appendChild(tr);
+      });
+    }
+
+    // 3. 顧客マスタ（編集ボタン追加）
+    function renderClients() {
+      const tbody = document.getElementById('clients-tbody');
+      tbody.innerHTML = '';
+      dbData.clients.forEach(c => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><b>${c.name}</b></td>
+          <td>${c.industry || '-'}</td>
+          <td>${c.contact_person || '-'}</td>
+          <td>${c.tel || '-'}</td>
+          <td style="text-align:right;">
+            <button class="btn-outline" style="margin-right:4px;" onclick="editClient(${c.id})">編集</button>
+            <button class="btn-danger" onclick="deleteClient(${c.id})">削除</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // 4. 専門家マスタ（編集ボタン追加）
+    function renderExperts() {
+      const tbody = document.getElementById('experts-tbody');
+      tbody.innerHTML = '';
+      dbData.experts.forEach(e => {
+        const badges = (e.specialties || []).map(s => `<span class="badge badge-slate">${s}</span>`).join('');
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><b>${e.name}</b><br><span style="font-size:11px; color:#64748b;">#${e.cert_number}</span></td>
+          <td>${e.organization || '-'}<br><span style="font-size:11px; color:#64748b;">${e.prefecture || ''}</span></td>
+          <td>${badges}</td>
+          <td style="text-align:right;">
+            <button class="btn-outline" style="margin-right:4px;" onclick="editExpert(${e.id})">編集</button>
+            <button class="btn-danger" onclick="deleteExpert(${e.id})">削除</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function closeAllModals() {
+      document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
+    }
+
+    // 設定モーダル
+    function openConfigModal() {
+      document.getElementById('cfg-url').value = localStorage.getItem('itc_supabase_url') || '';
+      document.getElementById('cfg-key').value = localStorage.getItem('itc_supabase_key') || '';
+      document.getElementById('modal-config').style.display = 'flex';
+    }
+
+    async function handleSaveConfig(e) {
+      e.preventDefault();
+      const url = document.getElementById('cfg-url').value.trim();
+      const key = document.getElementById('cfg-key').value.trim();
+      localStorage.setItem('itc_supabase_url', url);
+      localStorage.setItem('itc_supabase_key', key);
+      closeAllModals();
+      if (initSupabase()) {
+        await fetchAllData();
+      }
+    }
+
+    // 案件作成・編集
+    function openProjectModal() {
+      if (!supabaseClient) { alert('先に右上の「⚙️ DB接続設定」を行ってください。'); return; }
+      document.getElementById('modal-project-title').textContent = '新規支援案件の起票';
+      document.getElementById('btn-save-project').textContent = 'DBへ保存';
+      document.getElementById('prj-id').value = '';
+      document.getElementById('prj-name').value = '';
+      document.getElementById('prj-start').value = new Date().toISOString().split('T')[0];
+      document.getElementById('prj-end').value = '';
+      document.getElementById('prj-budget').value = '';
+      document.getElementById('prj-planned-hours').value = '';
+
+      const cSel = document.getElementById('prj-client');
+      cSel.innerHTML = dbData.clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+      const lSel = document.getElementById('prj-leader');
+      lSel.innerHTML = dbData.experts.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+
+      const mBox = document.getElementById('prj-members-box');
+      mBox.innerHTML = dbData.experts.map(e => `
+        <label style="display:block; font-size:12px; margin-bottom:2px;">
+          <input type="checkbox" name="prj-members" value="${e.id}"> ${e.name}
+        </label>
+      `).join('');
+
+      document.getElementById('modal-project').style.display = 'flex';
+    }
+
+    function editProject(id) {
+      const p = dbData.projects.find(item => item.id === id);
+      if (!p) return;
+
+      document.getElementById('modal-project-title').textContent = '支援案件の修正・更新';
+      document.getElementById('btn-save-project').textContent = '変更をDBへ保存';
+      document.getElementById('prj-id').value = p.id;
+      document.getElementById('prj-name').value = p.name;
+      document.getElementById('prj-start').value = p.startDate || '';
+      document.getElementById('prj-end').value = p.endDate || '';
+      document.getElementById('prj-budget').value = p.budget !== undefined && p.budget !== null ? p.budget : '';
+      document.getElementById('prj-planned-hours').value = p.plannedHours !== undefined && p.plannedHours !== null ? p.plannedHours : '';
+
+      const cSel = document.getElementById('prj-client');
+      cSel.innerHTML = dbData.clients.map(c => `<option value="${c.id}" ${c.id === p.clientId ? 'selected' : ''}>${c.name}</option>`).join('');
+
+      const lSel = document.getElementById('prj-leader');
+      lSel.innerHTML = dbData.experts.map(e => `<option value="${e.id}" ${e.id === p.leaderId ? 'selected' : ''}>${e.name}</option>`).join('');
+
+      const mBox = document.getElementById('prj-members-box');
+      mBox.innerHTML = dbData.experts.map(e => {
+        const isChecked = (p.memberIds || []).includes(e.id);
+        return `
+          <label style="display:block; font-size:12px; margin-bottom:2px;">
+            <input type="checkbox" name="prj-members" value="${e.id}" ${isChecked ? 'checked' : ''}> ${e.name}
+          </label>
+        `;
+      }).join('');
+
+      document.getElementById('modal-project').style.display = 'flex';
+    }
+
+    async function handleSaveProject(e) {
+      e.preventDefault();
+      const prjId = document.getElementById('prj-id').value;
+      const mChecks = document.querySelectorAll('input[name="prj-members"]:checked');
+      const mIds = Array.from(mChecks).map(c => Number(c.value));
+      const budgetVal = document.getElementById('prj-budget').value;
+      const plannedHoursVal = document.getElementById('prj-planned-hours').value;
+
+      const record = {
+        client_id: Number(document.getElementById('prj-client').value),
+        name: document.getElementById('prj-name').value,
+        start_date: document.getElementById('prj-start').value,
+        end_date: document.getElementById('prj-end').value || null,
+        budget: budgetVal ? Number(budgetVal) : null,
+        planned_hours: plannedHoursVal ? Number(plannedHoursVal) : null,
+        leader_id: Number(document.getElementById('prj-leader').value)
+      };
+
+      if (prjId) {
+        const { error } = await supabaseClient.from('projects').update(record).eq('id', Number(prjId));
+        if (error) { alert('更新に失敗しました: ' + error.message); return; }
+
+        await supabaseClient.from('project_members').delete().eq('project_id', Number(prjId));
+        if (mIds.length > 0) {
+          const rows = mIds.map(eid => ({ project_id: Number(prjId), expert_id: eid }));
+          await supabaseClient.from('project_members').insert(rows);
+        }
+      } else {
+        const { data, error } = await supabaseClient.from('projects').insert([record]).select();
+        if (error) { alert('起票に失敗しました: ' + error.message); return; }
+        const newId = data[0].id;
+        if (mIds.length > 0) {
+          const rows = mIds.map(eid => ({ project_id: newId, expert_id: eid }));
+          await supabaseClient.from('project_members').insert(rows);
+        }
+      }
+
+      closeAllModals();
+      await fetchAllData();
+    }
+
+    async function deleteProject(id) {
+      const p = dbData.projects.find(item => item.id === id);
+      if (!p) return;
+      if (!confirm(`支援案件「${p.name}」を削除しますか？\n※関連する日報ログもCASCADE削除されます。`)) return;
+
+      const { error } = await supabaseClient.from('projects').delete().eq('id', id);
+      if (error) { alert('削除に失敗しました: ' + error.message); return; }
+      await fetchAllData();
+    }
+
+    // 日報ログモーダル
+    function openLogModal(projectId) {
+      const p = dbData.projects.find(item => item.id === projectId);
+      const c = dbData.clients.find(item => item.id === p.clientId) || { name: "" };
+      document.getElementById('modal-log-title').textContent = p.name;
+      document.getElementById('modal-log-subtitle').textContent = `支援先: ${c.name} | 終了予定: ${p.endDate || '未定'}`;
+      document.getElementById('log-p-id').value = projectId;
+
+      resetLogForm();
+
+      const candidateIds = Array.from(new Set([p.leaderId, ...(p.memberIds || [])]));
+      const sel = document.getElementById('log-expert');
+      sel.innerHTML = candidateIds.map(eid => {
+        const exp = dbData.experts.find(e => e.id === eid);
+        return exp ? `<option value="${exp.id}">${exp.name} ${exp.id === p.leaderId ? '(👑リーダ)' : ''}</option>` : '';
+      }).join('');
+
+      renderLogHistory(projectId);
+      document.getElementById('modal-log').style.display = 'flex';
+    }
+
+    function resetLogForm() {
+      document.getElementById('log-edit-id').value = '';
+      document.getElementById('log-date').value = new Date().toISOString().split('T')[0];
+      document.getElementById('log-hours').value = '3.0';
+      document.getElementById('log-theme').value = '';
+      document.getElementById('log-content').value = '';
+      document.getElementById('log-form-heading').textContent = '＋ 新規日報の入力';
+      document.getElementById('btn-submit-log').textContent = '日報を登録';
+      document.getElementById('btn-cancel-edit-log').style.display = 'none';
+    }
+
+    function editLog(logId) {
+      const l = dbData.logs.find(item => item.id === logId);
+      if (!l) return;
+
+      document.getElementById('log-edit-id').value = l.id;
+      document.getElementById('log-date').value = l.date;
+      document.getElementById('log-expert').value = l.expert_id;
+      document.getElementById('log-hours').value = l.hours;
+      document.getElementById('log-theme').value = l.title;
+      document.getElementById('log-content').value = l.content || '';
+
+      document.getElementById('log-form-heading').textContent = '✏️ 日報の修正';
+      document.getElementById('btn-submit-log').textContent = '修正をDBへ保存';
+      document.getElementById('btn-cancel-edit-log').style.display = 'inline-block';
+    }
+
+    async function deleteLog(logId) {
+      if (!confirm('この支援日報を削除しますか？')) return;
+      const { error } = await supabaseClient.from('activity_logs').delete().eq('id', logId);
+      if (error) { alert('削除に失敗しました: ' + error.message); return; }
+
+      await fetchAllData();
+      const pId = Number(document.getElementById('log-p-id').value);
+      renderLogHistory(pId);
+      resetLogForm();
+    }
+
+    function renderLogHistory(projectId) {
+      const box = document.getElementById('modal-log-history');
+      const pLogs = dbData.logs.filter(l => l.project_id === projectId).sort((a,b) => b.date.localeCompare(a.date));
+      if (pLogs.length === 0) {
+        box.innerHTML = '<div style="color:#94a3b8; padding:8px 0;">まだ日報ログはありません。</div>';
+        return;
+      }
+      box.innerHTML = pLogs.map(l => {
+        const exp = dbData.experts.find(e => e.id === l.expert_id) || { name: "不明" };
+        return `
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px; margin-bottom:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; color:#64748b;">
+              <span><b>${l.date}</b> (${l.hours}時間) - 担当: <b style="color:#1e293b;">${exp.name}</b></span>
+              <div style="display:flex; gap:4px;">
+                <button class="btn-outline" style="padding:2px 6px; font-size:11px;" onclick="editLog(${l.id})">修正</button>
+                <button class="btn-danger" style="padding:2px 6px; font-size:11px;" onclick="deleteLog(${l.id})">削除</button>
+              </div>
+            </div>
+            <div style="font-weight:bold; margin-top:4px; color:#1e293b;">${l.title}</div>
+            <div style="color:#475569; margin-top:2px;">${l.content || ''}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function handleSaveLog(e) {
+      e.preventDefault();
+      const pId = Number(document.getElementById('log-p-id').value);
+      const editId = document.getElementById('log-edit-id').value;
+
+      const record = {
+        project_id: pId,
+        date: document.getElementById('log-date').value,
+        expert_id: Number(document.getElementById('log-expert').value),
+        hours: Number(document.getElementById('log-hours').value),
+        title: document.getElementById('log-theme').value,
+        content: document.getElementById('log-content').value
+      };
+
+      if (editId) {
+        // 修正更新
+        const { error } = await supabaseClient.from('activity_logs').update(record).eq('id', Number(editId));
+        if (error) { alert('日報の修正に失敗しました: ' + error.message); return; }
+      } else {
+        // 新規登録
+        const { error } = await supabaseClient.from('activity_logs').insert([record]);
+        if (error) { alert('日報の登録に失敗しました: ' + error.message); return; }
+      }
+
+      resetLogForm();
+      await fetchAllData();
+      renderLogHistory(pId);
+    }
+
+    // 顧客登録・編集
+    function openClientModal() {
+      if (!supabaseClient) { alert('先に右上の「⚙️ DB接続設定」を行ってください。'); return; }
+      document.getElementById('modal-client-title').textContent = '顧客企業の登録';
+      document.getElementById('btn-save-client').textContent = 'DBへ登録';
+      document.getElementById('cli-id').value = '';
+      document.getElementById('cli-name').value = '';
+      document.getElementById('cli-industry').value = '';
+      document.getElementById('cli-contact').value = '';
+      document.getElementById('cli-tel').value = '';
+      document.getElementById('modal-client').style.display = 'flex';
+    }
+
+    function editClient(id) {
+      const c = dbData.clients.find(item => item.id === id);
+      if (!c) return;
+
+      document.getElementById('modal-client-title').textContent = '顧客企業の編集';
+      document.getElementById('btn-save-client').textContent = '変更を保存';
+      document.getElementById('cli-id').value = c.id;
+      document.getElementById('cli-name').value = c.name;
+      document.getElementById('cli-industry').value = c.industry || '';
+      document.getElementById('cli-contact').value = c.contact_person || '';
+      document.getElementById('cli-tel').value = c.tel || '';
+      document.getElementById('modal-client').style.display = 'flex';
+    }
+
+    async function handleSaveClient(e) {
+      e.preventDefault();
+      const cliId = document.getElementById('cli-id').value;
+      const record = {
+        name: document.getElementById('cli-name').value,
+        industry: document.getElementById('cli-industry').value,
+        contact_person: document.getElementById('cli-contact').value,
+        tel: document.getElementById('cli-tel').value
+      };
+
+      if (cliId) {
+        const { error } = await supabaseClient.from('clients').update(record).eq('id', Number(cliId));
+        if (error) { alert('更新に失敗しました: ' + error.message); return; }
+      } else {
+        const { error } = await supabaseClient.from('clients').insert([record]);
+        if (error) { alert('登録に失敗しました: ' + error.message); return; }
+      }
+
+      closeAllModals();
+      await fetchAllData();
+      renderClients();
+    }
+
+    async function deleteClient(id) {
+      if (!confirm('この顧客を削除しますか？\n※案件で参照されている場合は削除できません。')) return;
+      const { error } = await supabaseClient.from('clients').delete().eq('id', id);
+      if (error) { alert('削除できませんでした: ' + error.message); return; }
+      await fetchAllData();
+      renderClients();
+    }
+
+    // 専門家登録・編集
+    function openExpertModal() {
+      if (!supabaseClient) { alert('先に右上の「⚙️ DB接続設定」を行ってください。'); return; }
+      document.getElementById('modal-expert-title').textContent = '専門家（ITC）の登録';
+      document.getElementById('btn-save-expert').textContent = 'DBへ登録';
+      document.getElementById('exp-id').value = '';
+      document.getElementById('exp-name').value = '';
+      document.getElementById('exp-cert').value = '';
+      document.getElementById('exp-org').value = '';
+      document.getElementById('exp-pref').value = '';
+      document.getElementById('exp-specs').value = '';
+      document.getElementById('modal-expert').style.display = 'flex';
+    }
+
+    function editExpert(id) {
+      const exp = dbData.experts.find(item => item.id === id);
+      if (!exp) return;
+
+      document.getElementById('modal-expert-title').textContent = '専門家（ITC）の編集';
+      document.getElementById('btn-save-expert').textContent = '変更を保存';
+      document.getElementById('exp-id').value = exp.id;
+      document.getElementById('exp-name').value = exp.name;
+      document.getElementById('exp-cert').value = exp.cert_number;
+      document.getElementById('exp-org').value = exp.organization || '';
+      document.getElementById('exp-pref').value = exp.prefecture || '';
+      document.getElementById('exp-specs').value = (exp.specialties || []).join(', ');
+      document.getElementById('modal-expert').style.display = 'flex';
+    }
+
+    async function handleSaveExpert(e) {
+      e.preventDefault();
+      const expId = document.getElementById('exp-id').value;
+      const specs = document.getElementById('exp-specs').value.split(',').map(s => s.trim()).filter(Boolean);
+      const record = {
+        name: document.getElementById('exp-name').value,
+        cert_number: document.getElementById('exp-cert').value,
+        organization: document.getElementById('exp-org').value,
+        prefecture: document.getElementById('exp-pref').value,
+        specialties: specs,
+        status: 'active'
+      };
+
+      if (expId) {
+        const { error } = await supabaseClient.from('experts').update(record).eq('id', Number(expId));
+        if (error) { alert('更新に失敗しました: ' + error.message); return; }
+      } else {
+        const { error } = await supabaseClient.from('experts').insert([record]);
+        if (error) { alert('登録に失敗しました: ' + error.message); return; }
+      }
+
+      closeAllModals();
+      await fetchAllData();
+      renderExperts();
+    }
+
+    async function deleteExpert(id) {
+      if (!confirm('この専門家を削除しますか？')) return;
+      const { error } = await supabaseClient.from('experts').delete().eq('id', id);
+      if (error) { alert('削除できませんでした: ' + error.message); return; }
+      await fetchAllData();
+      renderExperts();
+    }
+
+    // CSVエクスポート（選択した月のみを抽出）
+    function exportCSV() {
+      const filterMonth = document.getElementById('report-month-filter').value;
+      const targetLogs = dbData.logs.filter(l => {
+        if (filterMonth === 'ALL') return true;
+        return l.date.startsWith(filterMonth);
+      });
+
+      if (targetLogs.length === 0) {
+        alert('出力対象の支援日報データがありません。');
+        return;
+      }
+
+      let csv = "\uFEFF日付,顧客名,案件名,担当専門家,稼働時間(h),支援テーマ,支援内容\n";
+      targetLogs.forEach(l => {
+        const prj = dbData.projects.find(p => p.id === l.project_id) || { name: "", clientId: null };
+        const cli = dbData.clients.find(c => c.id === prj.clientId) || { name: "" };
+        const exp = dbData.experts.find(e => e.id === l.expert_id) || { name: "" };
+        csv += `"${l.date}","${cli.name}","${prj.name}","${exp.name}",${l.hours},"${l.title.replace(/"/g, '""')}","${(l.content||'').replace(/"/g, '""')}"\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      const filenameSuffix = filterMonth === 'ALL' ? '全期間' : filterMonth;
+      a.download = `活動実績月報_${filenameSuffix}.csv`;
+      a.click();
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      if (initSupabase()) {
+        await fetchAllData();
+      }
+    });
+  </script>
+</body>
+</html>
