@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ITコーディネータ専門家・活動管理システム (認証付き)</title>
+  <title>ITコーディネータ専門家・活動管理システム (Supabase連携版)</title>
+  <!-- Supabase JS SDK (CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
@@ -21,9 +22,9 @@
     .btn-primary:hover { background: #4338ca; }
     .btn-secondary { background: #e2e8f0; color: #334155; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 500; }
     .btn-secondary:hover { background: #cbd5e1; }
-    .btn-outline { background: white; border: 1px solid #cbd5e1; color: #475569; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+    .btn-outline { background: white; border: 1px solid #cbd5e1; color: #475569; padding: 5px 10px; border-radius: 5px; font-size: 12px; cursor: pointer; }
     .btn-outline:hover { background: #f8fafc; color: #1e293b; }
-    .btn-danger { background: #fee2e2; color: #dc2626; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+    .btn-danger { background: #fee2e2; color: #dc2626; border: none; padding: 5px 10px; border-radius: 5px; font-size: 12px; cursor: pointer; }
     .btn-danger:hover { background: #fca5a5; }
     table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
     th { background: #f8fafc; color: #475569; padding: 10px 12px; border-bottom: 2px solid #e2e8f0; font-weight: 600; }
@@ -52,7 +53,7 @@
 </head>
 <body>
 
-  <!-- 1. ログイン画面（未認証時に表示） -->
+  <!-- 1. ログイン画面（未認証時・起動時に必ず表示） -->
   <div id="login-screen" class="login-wrapper">
     <div class="login-card">
       <div style="display:flex; align-items:center; justify-content:center; margin-bottom:16px;">
@@ -60,30 +61,24 @@
         <span style="font-size:17px; font-weight:bold; color:#0f172a;">ITコーディネータ活動管理</span>
       </div>
       <p style="font-size:12px; color:#64748b; text-align:center; margin-bottom:20px;">
-        登録済みのメールアドレスとパスワードでログインしてください
+        発行されたID（メールアドレス）とパスワードを入力してください
       </p>
 
       <div id="login-error" class="error-msg"></div>
 
       <form onsubmit="handleLogin(event)">
         <div class="form-group">
-          <label>メールアドレス</label>
-          <input type="email" id="login-email" placeholder="example@domain.com" required>
+          <label>ログインID（メールアドレス）</label>
+          <input type="email" id="login-email" placeholder="example@domain.com" required autocomplete="off">
         </div>
         <div class="form-group">
           <label>パスワード</label>
-          <input type="password" id="login-password" placeholder="••••••••" required>
+          <input type="password" id="login-password" placeholder="••••••••" required autocomplete="new-password">
         </div>
         <button type="submit" class="btn-primary" style="width:100%; padding:10px; font-size:14px; margin-top:6px;" id="btn-login-submit">
           ログイン
         </button>
       </form>
-
-      <div style="margin-top:20px; padding-top:14px; border-top:1px solid #f1f5f9; text-align:center;">
-        <button type="button" class="btn-outline" onclick="openConfigModal()" style="font-size:11px;">
-          ⚙️ DB接続設定（初回のみ）
-        </button>
-      </div>
     </div>
   </div>
 
@@ -92,7 +87,7 @@
     <header>
       <div class="header-title">
         <span class="logo">ITC</span>
-        <span>ITコーディネータ活動管理</span>
+        <span>ITコーディネータ活動管理 (Supabase DB接続)</span>
       </div>
       <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
         <span id="user-email-display" style="font-size:12px; color:#475569; font-weight:500;"></span>
@@ -113,7 +108,7 @@
           <div class="card-header">
             <div>
               <h2 style="font-size:16px; font-weight:bold;">支援プロジェクト一覧・体制管理</h2>
-              <p style="font-size:12px; color:#64748b;">案件CRUD、体制編成、日報入力・修正・削除を行います。</p>
+              <p style="font-size:12px; color:#64748b;">Supabase DBと直接連動し、案件CRUD、体制編成、日報入力を行います。</p>
             </div>
             <button class="btn-primary" onclick="openProjectModal()">+ 新規案件を起票</button>
           </div>
@@ -127,11 +122,15 @@
           <div class="card-header">
             <div>
               <h2 style="font-size:16px; font-weight:bold;">支援実績 月別・担当別集計</h2>
-              <p style="font-size:12px; color:#64748b;">選択した月の支援ログを自動集計・CSV出力します。</p>
+              <p style="font-size:12px; color:#64748b;">DBに蓄積された日次支援ログから自動集計します。</p>
             </div>
             <div style="display:flex; gap:8px; align-items:center;">
-              <select id="report-month-filter" onchange="renderReports()" style="padding:6px 10px; border-radius:6px; border:1px solid #cbd5e1; font-size:12px;"></select>
-              <button class="btn-secondary" onclick="exportCSV()">選択月のCSV出力</button>
+              <select id="report-month-filter" onchange="renderReports()" style="padding:6px 10px; border-radius:6px; border:1px solid #cbd5e1; font-size:12px;">
+                <option value="ALL">全期間</option>
+                <option value="2026-11" selected>2026年11月</option>
+                <option value="2026-10">2026年10月</option>
+              </select>
+              <button class="btn-secondary" onclick="exportCSV()">集計CSV出力</button>
             </div>
           </div>
 
@@ -178,13 +177,13 @@
           <div class="card-header">
             <div>
               <h2 style="font-size:16px; font-weight:bold;">顧客企業マスタ</h2>
-              <p style="font-size:12px; color:#64748b;">支援先企業の追加・編集・削除が可能です。</p>
+              <p style="font-size:12px; color:#64748b;">DBに登録されている顧客情報一覧です。</p>
             </div>
             <button class="btn-primary" onclick="openClientModal()">+ 顧客を追加</button>
           </div>
           <table>
             <thead>
-              <tr><th>企業名</th><th>業種</th><th>担当者</th><th>連絡先</th><th style="width:140px; text-align:right;">操作</th></tr>
+              <tr><th>企業名</th><th>業種</th><th>担当者</th><th>連絡先</th><th>操作</th></tr>
             </thead>
             <tbody id="clients-tbody"></tbody>
           </table>
@@ -197,43 +196,19 @@
           <div class="card-header">
             <div>
               <h2 style="font-size:16px; font-weight:bold;">専門家マスタ（ITコーディネータ）</h2>
-              <p style="font-size:12px; color:#64748b;">登録専門家の追加・編集・削除が可能です。</p>
+              <p style="font-size:12px; color:#64748b;">DBに登録されている専門家マスタ一覧です。</p>
             </div>
             <button class="btn-primary" onclick="openExpertModal()">+ 専門家を登録</button>
           </div>
           <table>
             <thead>
-              <tr><th>氏名 / 認定番号</th><th>所属 / 地域</th><th>得意領域・強み</th><th style="width:140px; text-align:right;">操作</th></tr>
+              <tr><th>氏名 / 認定番号</th><th>所属 / 地域</th><th>得意領域・強み</th><th>操作</th></tr>
             </thead>
             <tbody id="experts-tbody"></tbody>
           </table>
         </div>
       </section>
     </main>
-  </div>
-
-  <!-- モーダル：Supabase接続設定 -->
-  <div id="modal-config" class="modal-overlay" style="display:none;">
-    <div class="modal-box">
-      <h3 style="font-size:15px; font-weight:bold; margin-bottom:12px;">⚙️ Supabase データベース接続設定</h3>
-      <p style="font-size:12px; color:#64748b; margin-bottom:14px;">
-        Supabaseダッシュボードの [Project Settings] > [API] にある <b>Project URL</b> と <b>anon public key</b> を入力してください。
-      </p>
-      <form onsubmit="handleSaveConfig(event)">
-        <div class="form-group">
-          <label>Project URL</label>
-          <input type="url" id="cfg-url" placeholder="https://ijxaznscwfruvlhwtivo.supabase.co" required>
-        </div>
-        <div class="form-group">
-          <label>anon (public) API Key</label>
-          <input type="text" id="cfg-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5c..." required>
-        </div>
-        <div class="form-actions">
-          <button type="button" class="btn-secondary" onclick="closeAllModals()">キャンセル</button>
-          <button type="submit" class="btn-primary">接続して保存</button>
-        </div>
-      </form>
-    </div>
   </div>
 
   <!-- モーダル：支援案件の登録・編集 -->
@@ -286,60 +261,54 @@
     </div>
   </div>
 
-  <!-- モーダル：日次支援ログ入力・修正 -->
+  <!-- モーダル：日次支援ログ入力 -->
   <div id="modal-log" class="modal-overlay" style="display:none;">
     <div class="modal-box">
       <h3 style="font-size:15px; font-weight:bold; margin-bottom:4px;" id="modal-log-title">支援日報の記録</h3>
       <p style="font-size:12px; color:#64748b; margin-bottom:14px;" id="modal-log-subtitle"></p>
       
-      <form onsubmit="handleSaveLog(event)" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; margin-bottom:16px;">
+      <form onsubmit="handleSaveLog(event)">
         <input type="hidden" id="log-p-id">
-        <input type="hidden" id="log-edit-id">
-        <div style="font-weight:bold; font-size:13px; margin-bottom:8px; color:#334155;" id="log-form-heading">＋ 新規日報の入力</div>
         <div class="form-group">
-          <label>実施日 <span style="color:#ef4444;">*</span></label>
+          <label>実施日</label>
           <input type="date" id="log-date" required>
         </div>
         <div class="form-group">
-          <label>実施した専門家 <span style="color:#ef4444;">*</span></label>
+          <label>実施した専門家</label>
           <select id="log-expert" required></select>
         </div>
         <div class="form-group">
-          <label>稼働時間 (時間) <span style="color:#ef4444;">*</span></label>
+          <label>稼働時間 (時間)</label>
           <input type="number" step="0.5" min="0.5" max="24" id="log-hours" value="3.0" required>
         </div>
         <div class="form-group">
-          <label>支援テーマ・件名 <span style="color:#ef4444;">*</span></label>
+          <label>支援テーマ・件名</label>
           <input type="text" id="log-theme" placeholder="例: 生産管理システムの要件確認" required>
         </div>
         <div class="form-group">
           <label>支援内容・決定事項</label>
           <textarea id="log-content" rows="3" placeholder="討議内容や次回までの宿題を記入"></textarea>
         </div>
-        <div class="form-actions" style="margin-top:10px; padding-top:10px;">
-          <button type="button" class="btn-secondary" id="btn-cancel-edit-log" style="display:none;" onclick="resetLogForm()">修正キャンセル</button>
-          <button type="submit" class="btn-primary" id="btn-submit-log">日報を登録</button>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="closeAllModals()">閉じる</button>
+          <button type="submit" class="btn-primary">日報を登録</button>
         </div>
       </form>
 
-      <div style="border-top:1px solid #e2e8f0; padding-top:14px;">
-        <h4 style="font-size:13px; font-weight:bold; margin-bottom:8px;">これまでの活動ログ一覧（修正・削除可能）</h4>
-        <div id="modal-log-history" style="max-height:220px; overflow-y:auto; font-size:12px;"></div>
-      </div>
-      <div style="display:flex; justify-content:flex-end; margin-top:14px;">
-        <button type="button" class="btn-secondary" onclick="closeAllModals()">閉じる</button>
+      <div style="margin-top:20px; border-top:1px solid #e2e8f0; padding-top:14px;">
+        <h4 style="font-size:13px; font-weight:bold; margin-bottom:8px;">これまでの活動ログ一覧</h4>
+        <div id="modal-log-history" style="max-height:200px; overflow-y:auto; font-size:12px;"></div>
       </div>
     </div>
   </div>
 
-  <!-- モーダル：顧客登録・編集 -->
+  <!-- モーダル：顧客登録 -->
   <div id="modal-client" class="modal-overlay" style="display:none;">
     <div class="modal-box">
-      <h3 style="font-size:15px; font-weight:bold; margin-bottom:14px;" id="modal-client-title">顧客企業の登録</h3>
+      <h3 style="font-size:15px; font-weight:bold; margin-bottom:14px;">顧客企業の登録</h3>
       <form onsubmit="handleSaveClient(event)">
-        <input type="hidden" id="cli-id">
         <div class="form-group">
-          <label>企業名 <span style="color:#ef4444;">*</span></label>
+          <label>企業名</label>
           <input type="text" id="cli-name" required placeholder="株式会社〇〇">
         </div>
         <div class="form-group">
@@ -356,24 +325,23 @@
         </div>
         <div class="form-actions">
           <button type="button" class="btn-secondary" onclick="closeAllModals()">キャンセル</button>
-          <button type="submit" class="btn-primary" id="btn-save-client">DBへ登録</button>
+          <button type="submit" class="btn-primary">DBへ登録</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- モーダル：専門家登録・編集 -->
+  <!-- モーダル：専門家登録 -->
   <div id="modal-expert" class="modal-overlay" style="display:none;">
     <div class="modal-box">
-      <h3 style="font-size:15px; font-weight:bold; margin-bottom:14px;" id="modal-expert-title">専門家（ITC）の登録</h3>
+      <h3 style="font-size:15px; font-weight:bold; margin-bottom:14px;">専門家（ITC）の登録</h3>
       <form onsubmit="handleSaveExpert(event)">
-        <input type="hidden" id="exp-id">
         <div class="form-group">
-          <label>氏名 <span style="color:#ef4444;">*</span></label>
+          <label>氏名</label>
           <input type="text" id="exp-name" required placeholder="例: 高橋 健二">
         </div>
         <div class="form-group">
-          <label>ITC認定番号 <span style="color:#ef4444;">*</span></label>
+          <label>ITC認定番号</label>
           <input type="text" id="exp-cert" required placeholder="例: 9000002026C">
         </div>
         <div class="form-group">
@@ -390,35 +358,45 @@
         </div>
         <div class="form-actions">
           <button type="button" class="btn-secondary" onclick="closeAllModals()">キャンセル</button>
-          <button type="submit" class="btn-primary" id="btn-save-expert">DBへ登録</button>
+          <button type="submit" class="btn-primary">DBへ登録</button>
         </div>
       </form>
     </div>
   </div>
 
   <script>
-    // 既定のSupabase URL（必要に応じてAnon Keyもここに入力すると共有時に設定不要になります）
     const DEFAULT_SUPABASE_URL = 'https://ijxaznscwfruvlhwtivo.supabase.co';
-    const DEFAULT_SUPABASE_ANON_KEY = ''; // ← ここにanon public keyを貼り付けておくと共有先での設定が不要になります
+    const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_lBoVamI3kjP_2bD9ZoKvrQ_rOS3P4ZE';
 
+    // Supabase クライアント管理
     let supabaseClient = null;
     let dbData = { experts: [], clients: [], projects: [], projectMembers: [], logs: [] };
 
-    function initSupabase() {
-      const url = localStorage.getItem('itc_supabase_url') || DEFAULT_SUPABASE_URL;
-      const key = localStorage.getItem('itc_supabase_key') || DEFAULT_SUPABASE_ANON_KEY;
-
-      if (!url || !key) {
-        showLoginError('先に下の「⚙️ DB接続設定」から Supabase の API Key を設定してください。');
-        return false;
-      }
-
+    // ブラウザ内に残っている過去のセッション情報をすべて消去する共通処理
+    function clearAllAuthStorage() {
       try {
-        supabaseClient = supabase.createClient(url, key);
+        Object.keys(localStorage).forEach(k => {
+          if (k.startsWith('sb-') || k.includes('supabase')) localStorage.removeItem(k);
+        });
+        Object.keys(sessionStorage).forEach(k => {
+          if (k.startsWith('sb-') || k.includes('supabase')) sessionStorage.removeItem(k);
+        });
+      } catch (e) {}
+    }
+
+    function initSupabase() {
+      try {
+        // ブラウザにログイン状態を保存しない（メモリ上のみ保持）
+        supabaseClient = supabase.createClient(DEFAULT_SUPABASE_URL, DEFAULT_SUPABASE_ANON_KEY, {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false
+          }
+        });
         hideLoginError();
         return true;
       } catch (err) {
-        showLoginError('Supabaseクライアントの初期化に失敗しました。URLとKeyを確認してください。');
+        showLoginError('システム接続の初期化に失敗しました。管理者に連絡してください。');
         return false;
       }
     }
@@ -433,17 +411,15 @@
       document.getElementById('login-error').style.display = 'none';
     }
 
-    // ログイン状態の確認と画面切り替え
-    async function checkAuthSession() {
+    // 起動・再読み込み時に必ずログアウト状態へリセットし、ログイン画面を表示する
+    async function resetToLoginScreen() {
+      clearAllAuthStorage();
       if (!initSupabase()) return;
+      await supabaseClient.auth.signOut();
 
-      const { data: { session } } = await supabaseClient.auth.getSession();
-      if (session) {
-        enterApp(session.user);
-      } else {
-        document.getElementById('login-screen').style.display = 'flex';
-        document.getElementById('app-screen').style.display = 'none';
-      }
+      document.getElementById('login-password').value = '';
+      document.getElementById('app-screen').style.display = 'none';
+      document.getElementById('login-screen').style.display = 'flex';
     }
 
     async function handleLogin(e) {
@@ -464,20 +440,16 @@
       btn.textContent = 'ログイン';
 
       if (error) {
-        showLoginError('ログインに失敗しました: メールアドレスまたはパスワードが正しくありません。');
+        showLoginError('ログインに失敗しました: ID（メールアドレス）またはパスワードが正しくありません。');
         return;
       }
 
       enterApp(data.user);
     }
 
+    // ログアウトボタン押下時の処理
     async function handleLogout() {
-      if (supabaseClient) {
-        await supabaseClient.auth.signOut();
-      }
-      document.getElementById('login-password').value = '';
-      document.getElementById('app-screen').style.display = 'none';
-      document.getElementById('login-screen').style.display = 'flex';
+      await resetToLoginScreen();
     }
 
     async function enterApp(user) {
@@ -487,6 +459,19 @@
       await fetchAllData();
     }
 
+    // Windowsの「×」ボタン・タブ閉じ・ページ離脱時にログアウトと同じ終了処理を実行
+    function handleWindowClose() {
+      clearAllAuthStorage();
+      if (supabaseClient) {
+        supabaseClient.auth.signOut();
+      }
+      document.getElementById('app-screen').style.display = 'none';
+      document.getElementById('login-screen').style.display = 'flex';
+    }
+    window.addEventListener('pagehide', handleWindowClose);
+    window.addEventListener('beforeunload', handleWindowClose);
+
+    // 全マスタ・案件データの最新フェッチ
     async function fetchAllData() {
       if (!supabaseClient) return;
 
@@ -499,7 +484,7 @@
       ]);
 
       if (resExp.error || resCli.error || resPrj.error) {
-        alert('DBからのデータ取得に失敗しました。RLSポリシーまたは接続設定を確認してください。\n' + (resExp.error?.message || resCli.error?.message || resPrj.error?.message));
+        alert('DBからのデータ取得に失敗しました。アクセス権限（RLSポリシー）を確認してください。\n' + (resExp.error?.message || resCli.error?.message || resPrj.error?.message));
         return;
       }
 
@@ -508,6 +493,7 @@
       dbData.projectMembers = resMem.data || [];
       dbData.logs = resLog.data || [];
 
+      // 案件に memberIds をマッピング
       dbData.projects = (resPrj.data || []).map(p => {
         const mIds = dbData.projectMembers.filter(m => m.project_id === p.id).map(m => m.expert_id);
         return {
@@ -527,6 +513,7 @@
       renderProjects();
     }
 
+    // タブ切り替え
     function showTab(tabName) {
       ['projects', 'reports', 'clients', 'experts'].forEach(t => {
         document.getElementById('tab-' + t).style.display = (t === tabName) ? 'block' : 'none';
@@ -543,6 +530,7 @@
       return '¥' + Number(val).toLocaleString();
     }
 
+    // 1. プロジェクト一覧
     function renderProjects() {
       const area = document.getElementById('projects-list-area');
       area.innerHTML = '';
@@ -604,7 +592,7 @@
             <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
               <button class="btn-primary" onclick="openLogModal(${p.id})">支援日報の記録・履歴 →</button>
               <div style="display:flex; gap:6px; margin-top:4px;">
-                <button class="btn-outline" onclick="editProject(${p.id})">編集</button>
+                <button class="btn-outline" onclick="editProject(${p.id})">編集・修正</button>
                 <button class="btn-danger" onclick="deleteProject(${p.id})">削除</button>
               </div>
             </div>
@@ -632,6 +620,7 @@
       }
     }
 
+    // 2. 実績月報
     function renderReports() {
       const filterMonth = document.getElementById('report-month-filter').value;
       const logs = dbData.logs.filter(l => {
@@ -651,6 +640,7 @@
       document.getElementById('kpi-experts').textContent = expSet.size + ' 名';
       document.getElementById('kpi-clients').textContent = clientSet.size + ' 社';
 
+      // 顧客別
       const cTbody = document.getElementById('report-clients-tbody');
       cTbody.innerHTML = '';
       dbData.clients.forEach(c => {
@@ -670,6 +660,7 @@
         cTbody.appendChild(tr);
       });
 
+      // 専門家別
       const eTbody = document.getElementById('report-experts-tbody');
       eTbody.innerHTML = '';
       dbData.experts.forEach(e => {
@@ -692,6 +683,7 @@
       });
     }
 
+    // 3. 顧客マスタ
     function renderClients() {
       const tbody = document.getElementById('clients-tbody');
       tbody.innerHTML = '';
@@ -702,15 +694,13 @@
           <td>${c.industry || '-'}</td>
           <td>${c.contact_person || '-'}</td>
           <td>${c.tel || '-'}</td>
-          <td style="text-align:right;">
-            <button class="btn-outline" style="margin-right:4px;" onclick="editClient(${c.id})">編集</button>
-            <button class="btn-danger" onclick="deleteClient(${c.id})">削除</button>
-          </td>
+          <td><button class="btn-danger" onclick="deleteClient(${c.id})">削除</button></td>
         `;
         tbody.appendChild(tr);
       });
     }
 
+    // 4. 専門家マスタ
     function renderExperts() {
       const tbody = document.getElementById('experts-tbody');
       tbody.innerHTML = '';
@@ -721,10 +711,7 @@
           <td><b>${e.name}</b><br><span style="font-size:11px; color:#64748b;">#${e.cert_number}</span></td>
           <td>${e.organization || '-'}<br><span style="font-size:11px; color:#64748b;">${e.prefecture || ''}</span></td>
           <td>${badges}</td>
-          <td style="text-align:right;">
-            <button class="btn-outline" style="margin-right:4px;" onclick="editExpert(${e.id})">編集</button>
-            <button class="btn-danger" onclick="deleteExpert(${e.id})">削除</button>
-          </td>
+          <td><button class="btn-danger" onclick="deleteExpert(${e.id})">削除</button></td>
         `;
         tbody.appendChild(tr);
       });
@@ -734,22 +721,7 @@
       document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
     }
 
-    function openConfigModal() {
-      document.getElementById('cfg-url').value = localStorage.getItem('itc_supabase_url') || DEFAULT_SUPABASE_URL;
-      document.getElementById('cfg-key').value = localStorage.getItem('itc_supabase_key') || DEFAULT_SUPABASE_ANON_KEY;
-      document.getElementById('modal-config').style.display = 'flex';
-    }
-
-    async function handleSaveConfig(e) {
-      e.preventDefault();
-      const url = document.getElementById('cfg-url').value.trim();
-      const key = document.getElementById('cfg-key').value.trim();
-      localStorage.setItem('itc_supabase_url', url);
-      localStorage.setItem('itc_supabase_key', key);
-      closeAllModals();
-      await checkAuthSession();
-    }
-
+    // 案件起票・編集
     function openProjectModal() {
       document.getElementById('modal-project-title').textContent = '新規支援案件の起票';
       document.getElementById('btn-save-project').textContent = 'DBへ保存';
@@ -760,9 +732,14 @@
       document.getElementById('prj-budget').value = '';
       document.getElementById('prj-planned-hours').value = '';
 
-      document.getElementById('prj-client').innerHTML = dbData.clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-      document.getElementById('prj-leader').innerHTML = dbData.experts.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
-      document.getElementById('prj-members-box').innerHTML = dbData.experts.map(e => `
+      const cSel = document.getElementById('prj-client');
+      cSel.innerHTML = dbData.clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+      const lSel = document.getElementById('prj-leader');
+      lSel.innerHTML = dbData.experts.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+
+      const mBox = document.getElementById('prj-members-box');
+      mBox.innerHTML = dbData.experts.map(e => `
         <label style="display:block; font-size:12px; margin-bottom:2px;">
           <input type="checkbox" name="prj-members" value="${e.id}"> ${e.name}
         </label>
@@ -784,9 +761,14 @@
       document.getElementById('prj-budget').value = p.budget !== undefined && p.budget !== null ? p.budget : '';
       document.getElementById('prj-planned-hours').value = p.plannedHours !== undefined && p.plannedHours !== null ? p.plannedHours : '';
 
-      document.getElementById('prj-client').innerHTML = dbData.clients.map(c => `<option value="${c.id}" ${c.id === p.clientId ? 'selected' : ''}>${c.name}</option>`).join('');
-      document.getElementById('prj-leader').innerHTML = dbData.experts.map(e => `<option value="${e.id}" ${e.id === p.leaderId ? 'selected' : ''}>${e.name}</option>`).join('');
-      document.getElementById('prj-members-box').innerHTML = dbData.experts.map(e => {
+      const cSel = document.getElementById('prj-client');
+      cSel.innerHTML = dbData.clients.map(c => `<option value="${c.id}" ${c.id === p.clientId ? 'selected' : ''}>${c.name}</option>`).join('');
+
+      const lSel = document.getElementById('prj-leader');
+      lSel.innerHTML = dbData.experts.map(e => `<option value="${e.id}" ${e.id === p.leaderId ? 'selected' : ''}>${e.name}</option>`).join('');
+
+      const mBox = document.getElementById('prj-members-box');
+      mBox.innerHTML = dbData.experts.map(e => {
         const isChecked = (p.memberIds || []).includes(e.id);
         return `
           <label style="display:block; font-size:12px; margin-bottom:2px;">
@@ -849,61 +831,26 @@
       await fetchAllData();
     }
 
+    // 日報ログモーダル
     function openLogModal(projectId) {
       const p = dbData.projects.find(item => item.id === projectId);
       const c = dbData.clients.find(item => item.id === p.clientId) || { name: "" };
       document.getElementById('modal-log-title').textContent = p.name;
       document.getElementById('modal-log-subtitle').textContent = `支援先: ${c.name} | 終了予定: ${p.endDate || '未定'}`;
       document.getElementById('log-p-id').value = projectId;
-
-      resetLogForm();
+      document.getElementById('log-date').value = new Date().toISOString().split('T')[0];
+      document.getElementById('log-theme').value = '';
+      document.getElementById('log-content').value = '';
 
       const candidateIds = Array.from(new Set([p.leaderId, ...(p.memberIds || [])]));
-      document.getElementById('log-expert').innerHTML = candidateIds.map(eid => {
+      const sel = document.getElementById('log-expert');
+      sel.innerHTML = candidateIds.map(eid => {
         const exp = dbData.experts.find(e => e.id === eid);
         return exp ? `<option value="${exp.id}">${exp.name} ${exp.id === p.leaderId ? '(👑リーダ)' : ''}</option>` : '';
       }).join('');
 
       renderLogHistory(projectId);
       document.getElementById('modal-log').style.display = 'flex';
-    }
-
-    function resetLogForm() {
-      document.getElementById('log-edit-id').value = '';
-      document.getElementById('log-date').value = new Date().toISOString().split('T')[0];
-      document.getElementById('log-hours').value = '3.0';
-      document.getElementById('log-theme').value = '';
-      document.getElementById('log-content').value = '';
-      document.getElementById('log-form-heading').textContent = '＋ 新規日報の入力';
-      document.getElementById('btn-submit-log').textContent = '日報を登録';
-      document.getElementById('btn-cancel-edit-log').style.display = 'none';
-    }
-
-    function editLog(logId) {
-      const l = dbData.logs.find(item => item.id === logId);
-      if (!l) return;
-
-      document.getElementById('log-edit-id').value = l.id;
-      document.getElementById('log-date').value = l.date;
-      document.getElementById('log-expert').value = l.expert_id;
-      document.getElementById('log-hours').value = l.hours;
-      document.getElementById('log-theme').value = l.title;
-      document.getElementById('log-content').value = l.content || '';
-
-      document.getElementById('log-form-heading').textContent = '✏️ 日報の修正';
-      document.getElementById('btn-submit-log').textContent = '修正をDBへ保存';
-      document.getElementById('btn-cancel-edit-log').style.display = 'inline-block';
-    }
-
-    async function deleteLog(logId) {
-      if (!confirm('この支援日報を削除しますか？')) return;
-      const { error } = await supabaseClient.from('activity_logs').delete().eq('id', logId);
-      if (error) { alert('削除に失敗しました: ' + error.message); return; }
-
-      await fetchAllData();
-      const pId = Number(document.getElementById('log-p-id').value);
-      renderLogHistory(pId);
-      resetLogForm();
     }
 
     function renderLogHistory(projectId) {
@@ -916,15 +863,12 @@
       box.innerHTML = pLogs.map(l => {
         const exp = dbData.experts.find(e => e.id === l.expert_id) || { name: "不明" };
         return `
-          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px; margin-bottom:8px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; color:#64748b;">
-              <span><b>${l.date}</b> (${l.hours}時間) - 担当: <b style="color:#1e293b;">${exp.name}</b></span>
-              <div style="display:flex; gap:4px;">
-                <button class="btn-outline" style="padding:2px 6px; font-size:11px;" onclick="editLog(${l.id})">修正</button>
-                <button class="btn-danger" style="padding:2px 6px; font-size:11px;" onclick="deleteLog(${l.id})">削除</button>
-              </div>
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:8px; margin-bottom:6px;">
+            <div style="display:flex; justify-content:space-between; color:#64748b;">
+              <span><b>${l.date}</b> (${l.hours}時間)</span>
+              <span>担当: <b>${exp.name}</b></span>
             </div>
-            <div style="font-weight:bold; margin-top:4px; color:#1e293b;">${l.title}</div>
+            <div style="font-weight:bold; margin-top:2px; color:#1e293b;">${l.title}</div>
             <div style="color:#475569; margin-top:2px;">${l.content || ''}</div>
           </div>
         `;
@@ -934,8 +878,6 @@
     async function handleSaveLog(e) {
       e.preventDefault();
       const pId = Number(document.getElementById('log-p-id').value);
-      const editId = document.getElementById('log-edit-id').value;
-
       const record = {
         project_id: pId,
         date: document.getElementById('log-date').value,
@@ -945,47 +887,21 @@
         content: document.getElementById('log-content').value
       };
 
-      if (editId) {
-        const { error } = await supabaseClient.from('activity_logs').update(record).eq('id', Number(editId));
-        if (error) { alert('日報の修正に失敗しました: ' + error.message); return; }
-      } else {
-        const { error } = await supabaseClient.from('activity_logs').insert([record]);
-        if (error) { alert('日報の登録に失敗しました: ' + error.message); return; }
-      }
+      const { error } = await supabaseClient.from('activity_logs').insert([record]);
+      if (error) { alert('日報の登録に失敗しました: ' + error.message); return; }
 
-      resetLogForm();
+      document.getElementById('log-theme').value = '';
+      document.getElementById('log-content').value = '';
       await fetchAllData();
       renderLogHistory(pId);
     }
 
+    // 顧客登録
     function openClientModal() {
-      document.getElementById('modal-client-title').textContent = '顧客企業の登録';
-      document.getElementById('btn-save-client').textContent = 'DBへ登録';
-      document.getElementById('cli-id').value = '';
-      document.getElementById('cli-name').value = '';
-      document.getElementById('cli-industry').value = '';
-      document.getElementById('cli-contact').value = '';
-      document.getElementById('cli-tel').value = '';
       document.getElementById('modal-client').style.display = 'flex';
     }
-
-    function editClient(id) {
-      const c = dbData.clients.find(item => item.id === id);
-      if (!c) return;
-
-      document.getElementById('modal-client-title').textContent = '顧客企業の編集';
-      document.getElementById('btn-save-client').textContent = '変更を保存';
-      document.getElementById('cli-id').value = c.id;
-      document.getElementById('cli-name').value = c.name;
-      document.getElementById('cli-industry').value = c.industry || '';
-      document.getElementById('cli-contact').value = c.contact_person || '';
-      document.getElementById('cli-tel').value = c.tel || '';
-      document.getElementById('modal-client').style.display = 'flex';
-    }
-
     async function handleSaveClient(e) {
       e.preventDefault();
-      const cliId = document.getElementById('cli-id').value;
       const record = {
         name: document.getElementById('cli-name').value,
         industry: document.getElementById('cli-industry').value,
@@ -993,19 +909,12 @@
         tel: document.getElementById('cli-tel').value
       };
 
-      if (cliId) {
-        const { error } = await supabaseClient.from('clients').update(record).eq('id', Number(cliId));
-        if (error) { alert('更新に失敗しました: ' + error.message); return; }
-      } else {
-        const { error } = await supabaseClient.from('clients').insert([record]);
-        if (error) { alert('登録に失敗しました: ' + error.message); return; }
-      }
-
+      const { error } = await supabaseClient.from('clients').insert([record]);
+      if (error) { alert('顧客の登録に失敗しました: ' + error.message); return; }
       closeAllModals();
       await fetchAllData();
       renderClients();
     }
-
     async function deleteClient(id) {
       if (!confirm('この顧客を削除しますか？\n※案件で参照されている場合は削除できません。')) return;
       const { error } = await supabaseClient.from('clients').delete().eq('id', id);
@@ -1014,36 +923,12 @@
       renderClients();
     }
 
+    // 専門家登録
     function openExpertModal() {
-      document.getElementById('modal-expert-title').textContent = '専門家（ITC）の登録';
-      document.getElementById('btn-save-expert').textContent = 'DBへ登録';
-      document.getElementById('exp-id').value = '';
-      document.getElementById('exp-name').value = '';
-      document.getElementById('exp-cert').value = '';
-      document.getElementById('exp-org').value = '';
-      document.getElementById('exp-pref').value = '';
-      document.getElementById('exp-specs').value = '';
       document.getElementById('modal-expert').style.display = 'flex';
     }
-
-    function editExpert(id) {
-      const exp = dbData.experts.find(item => item.id === id);
-      if (!exp) return;
-
-      document.getElementById('modal-expert-title').textContent = '専門家（ITC）の編集';
-      document.getElementById('btn-save-expert').textContent = '変更を保存';
-      document.getElementById('exp-id').value = exp.id;
-      document.getElementById('exp-name').value = exp.name;
-      document.getElementById('exp-cert').value = exp.cert_number;
-      document.getElementById('exp-org').value = exp.organization || '';
-      document.getElementById('exp-pref').value = exp.prefecture || '';
-      document.getElementById('exp-specs').value = (exp.specialties || []).join(', ');
-      document.getElementById('modal-expert').style.display = 'flex';
-    }
-
     async function handleSaveExpert(e) {
       e.preventDefault();
-      const expId = document.getElementById('exp-id').value;
       const specs = document.getElementById('exp-specs').value.split(',').map(s => s.trim()).filter(Boolean);
       const record = {
         name: document.getElementById('exp-name').value,
@@ -1054,19 +939,12 @@
         status: 'active'
       };
 
-      if (expId) {
-        const { error } = await supabaseClient.from('experts').update(record).eq('id', Number(expId));
-        if (error) { alert('更新に失敗しました: ' + error.message); return; }
-      } else {
-        const { error } = await supabaseClient.from('experts').insert([record]);
-        if (error) { alert('登録に失敗しました: ' + error.message); return; }
-      }
-
+      const { error } = await supabaseClient.from('experts').insert([record]);
+      if (error) { alert('専門家の登録に失敗しました: ' + error.message); return; }
       closeAllModals();
       await fetchAllData();
       renderExperts();
     }
-
     async function deleteExpert(id) {
       if (!confirm('この専門家を削除しますか？')) return;
       const { error } = await supabaseClient.from('experts').delete().eq('id', id);
@@ -1075,6 +953,7 @@
       renderExperts();
     }
 
+    // CSVエクスポート
     function exportCSV() {
       const filterMonth = document.getElementById('report-month-filter').value;
       const targetLogs = dbData.logs.filter(l => {
@@ -1082,19 +961,13 @@
         return l.date.startsWith(filterMonth);
       });
 
-      if (targetLogs.length === 0) {
-        alert('出力対象の支援日報データがありません。');
-        return;
-      }
-
-      let csv = "\uFEFF日付,顧客名,案件名,担当専門家,稼働時間(h),支援テーマ,支援内容\n";
+      let csv = "\uFEFF日付,顧客名,案件名,担当専門家,稼働時間,件名,内容\n";
       targetLogs.forEach(l => {
         const prj = dbData.projects.find(p => p.id === l.project_id) || { name: "", clientId: null };
         const cli = dbData.clients.find(c => c.id === prj.clientId) || { name: "" };
         const exp = dbData.experts.find(e => e.id === l.expert_id) || { name: "" };
         csv += `"${l.date}","${cli.name}","${prj.name}","${exp.name}",${l.hours},"${l.title.replace(/"/g, '""')}","${(l.content||'').replace(/"/g, '""')}"\n`;
       });
-
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
@@ -1103,8 +976,9 @@
       a.click();
     }
 
+    // 初期起動（起動・再アクセス時に必ずログイン画面へリセット）
     window.addEventListener('DOMContentLoaded', async () => {
-      await checkAuthSession();
+      await resetToLoginScreen();
     });
   </script>
 </body>
