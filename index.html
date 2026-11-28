@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ITコーディネータ専門家・活動管理システム (Supabase連携版)</title>
+  <title>ITコーディネータ専門家・活動管理システム (CRM/MA顧客共有版)</title>
   <!-- Supabase JS SDK (CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -17,9 +17,11 @@
     nav button.active { background: #ffffff; color: #4f46e5; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
     main { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
     .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 20px; }
-    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; }
-    .btn-primary { background: #4f46e5; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; flex-wrap: wrap; gap: 10px; }
+    .btn-primary { background: #4f46e5; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; }
     .btn-primary:hover { background: #4338ca; }
+    .btn-crm { background: #0f766e; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-crm:hover { background: #115e59; }
     .btn-secondary { background: #e2e8f0; color: #334155; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 500; }
     .btn-secondary:hover { background: #cbd5e1; }
     .btn-outline { background: white; border: 1px solid #cbd5e1; color: #475569; padding: 5px 10px; border-radius: 5px; font-size: 12px; cursor: pointer; }
@@ -28,10 +30,10 @@
     .btn-danger:hover { background: #fca5a5; }
     table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
     th { background: #f8fafc; color: #475569; padding: 10px 12px; border-bottom: 2px solid #e2e8f0; font-weight: 600; }
-    td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
+    td { padding: 12px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
     tr:hover td { background: #f8fafc; }
     .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; margin: 2px; }
-    .badge-blue { background: #e0e7ff; color: #4338ca; }
+    .badge-teal { background: #ccfbf1; color: #0f766e; }
     .badge-slate { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
     .modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
     .modal-box { background: #ffffff; border-radius: 10px; width: 100%; max-width: 580px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
@@ -45,6 +47,8 @@
     .kpi-num { font-size: 24px; font-weight: bold; color: #4f46e5; margin-top: 4px; }
     .progress-bar-bg { background-color: #e2e8f0; border-radius: 9999px; height: 7px; width: 100%; overflow: hidden; margin-top: 4px; }
     .progress-bar-fill { background-color: #4f46e5; height: 100%; border-radius: 9999px; }
+    .info-banner { background: #f0fdfa; border: 1px solid #99f6e4; color: #115e59; padding: 10px 14px; border-radius: 6px; font-size: 12px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .search-input { width: 100%; max-width: 360px; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; margin-bottom: 12px; }
     /* ログイン画面用スタイル */
     .login-wrapper { min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 16px; background: #e2e8f0; }
     .login-card { background: #ffffff; width: 100%; max-width: 400px; padding: 32px 24px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
@@ -87,7 +91,7 @@
     <header>
       <div class="header-title">
         <span class="logo">ITC</span>
-        <span>ITコーディネータ活動管理 (Supabase DB接続)</span>
+        <span>ITコーディネータ活動管理 (CRM/MA顧客共有版)</span>
       </div>
       <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
         <span id="user-email-display" style="font-size:12px; color:#475569; font-weight:500;"></span>
@@ -95,7 +99,7 @@
         <nav>
           <button id="nav-projects" class="active" onclick="showTab('projects')">支援案件・体制</button>
           <button id="nav-reports" onclick="showTab('reports')">月次稼働集計</button>
-          <button id="nav-clients" onclick="showTab('clients')">顧客マスタ</button>
+          <button id="nav-clients" onclick="showTab('clients')">共有顧客マスタ</button>
           <button id="nav-experts" onclick="showTab('experts')">専門家マスタ</button>
         </nav>
       </div>
@@ -108,7 +112,7 @@
           <div class="card-header">
             <div>
               <h2 style="font-size:16px; font-weight:bold;">支援プロジェクト一覧・体制管理</h2>
-              <p style="font-size:12px; color:#64748b;">Supabase DBと直接連動し、案件CRUD、体制編成、日報入力を行います。</p>
+              <p style="font-size:12px; color:#64748b;">CRM/MAシステムの共有顧客マスタと連動し、案件CRUD、体制編成、日報入力を行います。</p>
             </div>
             <button class="btn-primary" onclick="openProjectModal()">+ 新規案件を起票</button>
           </div>
@@ -127,8 +131,6 @@
             <div style="display:flex; gap:8px; align-items:center;">
               <select id="report-month-filter" onchange="renderReports()" style="padding:6px 10px; border-radius:6px; border:1px solid #cbd5e1; font-size:12px;">
                 <option value="ALL">全期間</option>
-                <option value="2026-11" selected>2026年11月</option>
-                <option value="2026-10">2026年10月</option>
               </select>
               <button class="btn-secondary" onclick="exportCSV()">集計CSV出力</button>
             </div>
@@ -148,15 +150,15 @@
               <div id="kpi-experts" class="kpi-num">0 名</div>
             </div>
             <div class="kpi-card">
-              <div style="font-size:12px; color:#64748b;">支援先企業数</div>
-              <div id="kpi-clients" class="kpi-num">0 社</div>
+              <div style="font-size:12px; color:#64748b;">支援先顧客数</div>
+              <div id="kpi-clients" class="kpi-num">0 件</div>
             </div>
           </div>
 
           <h3 style="font-size:14px; font-weight:bold; margin-bottom:8px;">■ 顧客別 稼働実績集計</h3>
           <table style="margin-bottom:24px;">
             <thead>
-              <tr><th>顧客名</th><th>対象案件</th><th>支援日数</th><th>月間総工数</th></tr>
+              <tr><th>顧客名（会社名 / 担当者）</th><th>対象案件</th><th>支援日数</th><th>月間総工数</th></tr>
             </thead>
             <tbody id="report-clients-tbody"></tbody>
           </table>
@@ -171,19 +173,36 @@
         </div>
       </section>
 
-      <!-- 3. 顧客マスタタブ -->
+      <!-- 3. 共有顧客マスタタブ（CRM/MA連携・閲覧専用） -->
       <section id="tab-clients" style="display:none;">
         <div class="card">
           <div class="card-header">
             <div>
-              <h2 style="font-size:16px; font-weight:bold;">顧客企業マスタ</h2>
-              <p style="font-size:12px; color:#64748b;">DBに登録されている顧客情報一覧です。</p>
+              <h2 style="font-size:16px; font-weight:bold;">共有顧客マスタ（CRM / MA統合基盤連動）</h2>
+              <p style="font-size:12px; color:#64748b;">CRM/MAシステム（NDMP-MAKET / customersテーブル）の最新顧客データをリアルタイム参照しています。</p>
             </div>
-            <button class="btn-primary" onclick="openClientModal()">+ 顧客を追加</button>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button class="btn-outline" onclick="fetchAllData().then(() => renderClients())">🔄 最新データに更新</button>
+              <a href="https://crm-ma-system2.vercel.app/login" target="_blank" rel="noopener noreferrer" class="btn-crm">
+                ↗ CRM/MAシステムで新規登録・編集する
+              </a>
+            </div>
           </div>
+
+          <div class="info-banner">
+            <span>ℹ️ 排他制御・名刺OCR・自動ステップメールの整合性を保つため、顧客の新規登録・編集・削除は <b>CRM/MAシステム</b> 側で行います。</span>
+          </div>
+
+          <input type="text" id="client-search-input" class="search-input" placeholder="🔍 会社名・担当者名・事業内容で絞り込み..." oninput="renderClients()">
+
           <table>
             <thead>
-              <tr><th>企業名</th><th>業種</th><th>担当者</th><th>連絡先</th><th>操作</th></tr>
+              <tr>
+                <th>企業名</th>
+                <th>部署・役職 / 担当者</th>
+                <th>連絡先（TEL / Email）</th>
+                <th>事業内容・メモ</th>
+              </tr>
             </thead>
             <tbody id="clients-tbody"></tbody>
           </table>
@@ -218,8 +237,11 @@
       <form onsubmit="handleSaveProject(event)">
         <input type="hidden" id="prj-id">
         <div class="form-group">
-          <label>支援先顧客 <span style="color:#ef4444;">*</span></label>
+          <label>支援先顧客（CRM/MA共有マスタ） <span style="color:#ef4444;">*</span></label>
           <select id="prj-client" required></select>
+          <div style="font-size:11px; color:#64748b; margin-top:4px;">
+            ※リストにない顧客は <a href="https://crm-ma-system2.vercel.app/login" target="_blank" rel="noopener noreferrer" style="color:#0f766e; font-weight:bold;">CRM/MAシステム</a> で登録後に再読み込みしてください。
+          </div>
         </div>
         <div class="form-group">
           <label>案件・プロジェクト名 <span style="color:#ef4444;">*</span></label>
@@ -302,35 +324,6 @@
     </div>
   </div>
 
-  <!-- モーダル：顧客登録 -->
-  <div id="modal-client" class="modal-overlay" style="display:none;">
-    <div class="modal-box">
-      <h3 style="font-size:15px; font-weight:bold; margin-bottom:14px;">顧客企業の登録</h3>
-      <form onsubmit="handleSaveClient(event)">
-        <div class="form-group">
-          <label>企業名</label>
-          <input type="text" id="cli-name" required placeholder="株式会社〇〇">
-        </div>
-        <div class="form-group">
-          <label>業種</label>
-          <input type="text" id="cli-industry" placeholder="例: 金属加工・製造業">
-        </div>
-        <div class="form-group">
-          <label>担当者名</label>
-          <input type="text" id="cli-contact" placeholder="例: 総務部 佐藤様">
-        </div>
-        <div class="form-group">
-          <label>連絡先</label>
-          <input type="text" id="cli-tel" placeholder="例: 03-XXXX-XXXX">
-        </div>
-        <div class="form-actions">
-          <button type="button" class="btn-secondary" onclick="closeAllModals()">キャンセル</button>
-          <button type="submit" class="btn-primary">DBへ登録</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
   <!-- モーダル：専門家登録 -->
   <div id="modal-expert" class="modal-overlay" style="display:none;">
     <div class="modal-box">
@@ -365,14 +358,18 @@
   </div>
 
   <script>
-    const DEFAULT_SUPABASE_URL = 'https://ijxaznscwfruvlhwtivo.supabase.co';
-    const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_ttu72prS4TwC_m5itPFufA_oCDWKeI3';
+    // ① ITコーディネータ活動管理システム側 Supabase（itc-project）※Project URLとキー全文字列を設定してください
+    const ITC_SUPABASE_URL = 'https://ijxaznscwfruvlhwtivo.supabase.co';
+    const ITC_SUPABASE_ANON_KEY = 'sb_publishable_ttu72prS4TwC_m5itPFufA_oCDWKeI3';
 
-    // Supabase クライアント管理
+    // ② CRM/MAシステム側 Supabase（NDMP-MAKET）
+    const CRM_SUPABASE_URL = 'https://pnyghdqvjzlldafopexs.supabase.co';
+    const CRM_SUPABASE_ANON_KEY = 'sb_publishable_lBoVamI3kjP_2bD9ZoKvrQ_rOS3P4ZE';
+
     let supabaseClient = null;
-    let dbData = { experts: [], clients: [], projects: [], projectMembers: [], logs: [] };
+    let crmSupabaseClient = null;
+    let dbData = { experts: [], customers: [], projects: [], projectMembers: [], logs: [] };
 
-    // ブラウザ内に残っている過去のセッション情報をすべて消去する共通処理
     function clearAllAuthStorage() {
       try {
         Object.keys(localStorage).forEach(k => {
@@ -386,8 +383,13 @@
 
     function initSupabase() {
       try {
-        // ブラウザにログイン状態を保存しない（メモリ上のみ保持）
-        supabaseClient = supabase.createClient(DEFAULT_SUPABASE_URL, DEFAULT_SUPABASE_ANON_KEY, {
+        supabaseClient = supabase.createClient(ITC_SUPABASE_URL, ITC_SUPABASE_ANON_KEY, {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false
+          }
+        });
+        crmSupabaseClient = supabase.createClient(CRM_SUPABASE_URL, CRM_SUPABASE_ANON_KEY, {
           auth: {
             persistSession: false,
             autoRefreshToken: false
@@ -396,7 +398,7 @@
         hideLoginError();
         return true;
       } catch (err) {
-        showLoginError('システム接続の初期化に失敗しました。管理者に連絡してください。');
+        showLoginError('システム接続の初期化に失敗しました。URL・キー設定を確認してください。');
         return false;
       }
     }
@@ -411,7 +413,6 @@
       document.getElementById('login-error').style.display = 'none';
     }
 
-    // 起動・再読み込み時に必ずログアウト状態へリセットし、ログイン画面を表示する
     async function resetToLoginScreen() {
       clearAllAuthStorage();
       if (!initSupabase()) return;
@@ -447,7 +448,6 @@
       enterApp(data.user);
     }
 
-    // ログアウトボタン押下時の処理
     async function handleLogout() {
       await resetToLoginScreen();
     }
@@ -459,7 +459,6 @@
       await fetchAllData();
     }
 
-    // Windowsの「×」ボタン・タブ閉じ・ページ離脱時にログアウトと同じ終了処理を実行
     function handleWindowClose() {
       clearAllAuthStorage();
       if (supabaseClient) {
@@ -471,29 +470,39 @@
     window.addEventListener('pagehide', handleWindowClose);
     window.addEventListener('beforeunload', handleWindowClose);
 
-    // 全マスタ・案件データの最新フェッチ
-    async function fetchAllData() {
-      if (!supabaseClient) return;
+    function formatCustomerLabel(c) {
+      if (!c) return '未設定（顧客未選択）';
+      const company = c.company_name || '会社名未設定';
+      const person = c.contact_name ? ` / ${c.contact_name}` : '';
+      const dept = c.department ? `（${c.department}）` : '';
+      return `${company}${person}${dept}`;
+    }
 
-      const [resExp, resCli, resPrj, resMem, resLog] = await Promise.all([
+    // ITC側DB（itc-project: experts, projects, project_members, activity_logs）と CRM/MA側DB（NDMP-MAKET: customers）を同時取得
+    async function fetchAllData() {
+      if (!supabaseClient || !crmSupabaseClient) return;
+
+      const [resExp, resCust, resPrj, resMem, resLog] = await Promise.all([
         supabaseClient.from('experts').select('*').order('id', { ascending: true }),
-        supabaseClient.from('clients').select('*').order('id', { ascending: true }),
+        crmSupabaseClient.from('customers').select('*').order('company_name', { ascending: true }),
         supabaseClient.from('projects').select('*').order('id', { ascending: false }),
         supabaseClient.from('project_members').select('*'),
         supabaseClient.from('activity_logs').select('*').order('date', { ascending: false })
       ]);
 
-      if (resExp.error || resCli.error || resPrj.error) {
-        alert('DBからのデータ取得に失敗しました。アクセス権限（RLSポリシー）を確認してください。\n' + (resExp.error?.message || resCli.error?.message || resPrj.error?.message));
+      if (resExp.error || resPrj.error) {
+        alert('ITC活動管理DB（itc-project）からのデータ取得に失敗しました:\n' + (resExp.error?.message || resPrj.error?.message));
         return;
+      }
+      if (resCust.error) {
+        alert('CRM/MA側（NDMP-MAKET / customers）からの顧客データ取得に失敗しました。RLS設定を確認してください:\n' + resCust.error.message);
       }
 
       dbData.experts = resExp.data || [];
-      dbData.clients = resCli.data || [];
+      dbData.customers = resCust.data || [];
       dbData.projectMembers = resMem.data || [];
       dbData.logs = resLog.data || [];
 
-      // 案件に memberIds をマッピング
       dbData.projects = (resPrj.data || []).map(p => {
         const mIds = dbData.projectMembers.filter(m => m.project_id === p.id).map(m => m.expert_id);
         return {
@@ -513,7 +522,6 @@
       renderProjects();
     }
 
-    // タブ切り替え
     function showTab(tabName) {
       ['projects', 'reports', 'clients', 'experts'].forEach(t => {
         document.getElementById('tab-' + t).style.display = (t === tabName) ? 'block' : 'none';
@@ -530,18 +538,18 @@
       return '¥' + Number(val).toLocaleString();
     }
 
-    // 1. プロジェクト一覧
     function renderProjects() {
       const area = document.getElementById('projects-list-area');
       area.innerHTML = '';
 
       if (dbData.projects.length === 0) {
-        area.innerHTML = '<div style="color:#94a3b8; padding:20px; text-align:center;">登録されている案件はありません。</div>';
+        area.innerHTML = '<div style="color:#94a3b8; padding:20px; text-align:center;">登録されている案件はありません。「+ 新規案件を起票」から登録してください。</div>';
         return;
       }
 
       dbData.projects.forEach(p => {
-        const client = dbData.clients.find(c => c.id === p.clientId) || { name: "不明" };
+        const customer = dbData.customers.find(c => c.id === p.clientId);
+        const customerLabel = customer ? formatCustomerLabel(customer) : '不明な顧客';
         const leader = dbData.experts.find(e => e.id === p.leaderId) || { name: "未定" };
         const pLogs = dbData.logs.filter(l => l.project_id === p.id);
         const actualHours = pLogs.reduce((s, l) => s + Number(l.hours), 0);
@@ -569,8 +577,8 @@
         div.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
             <div style="flex:1; min-width:280px;">
-              <div style="display:flex; align-items:center; gap:8px;">
-                <span class="badge badge-blue">${client.name}</span>
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <span class="badge badge-teal">${customerLabel}</span>
                 <span style="font-size:11px; color:#64748b;">期間: ${p.startDate} 〜 ${p.endDate ? p.endDate : '未定'}</span>
               </div>
               <h3 style="font-size:16px; font-weight:bold; margin-top:4px; color:#0f172a;">${p.name}</h3>
@@ -620,7 +628,6 @@
       }
     }
 
-    // 2. 実績月報
     function renderReports() {
       const filterMonth = document.getElementById('report-month-filter').value;
       const logs = dbData.logs.filter(l => {
@@ -638,12 +645,11 @@
       document.getElementById('kpi-logs').textContent = logs.length + ' 回';
       document.getElementById('kpi-hours').textContent = totalH.toFixed(1) + ' h';
       document.getElementById('kpi-experts').textContent = expSet.size + ' 名';
-      document.getElementById('kpi-clients').textContent = clientSet.size + ' 社';
+      document.getElementById('kpi-clients').textContent = clientSet.size + ' 件';
 
-      // 顧客別
       const cTbody = document.getElementById('report-clients-tbody');
       cTbody.innerHTML = '';
-      dbData.clients.forEach(c => {
+      dbData.customers.forEach(c => {
         const prjs = dbData.projects.filter(p => p.clientId === c.id);
         const pIds = prjs.map(p => p.id);
         const cLogs = logs.filter(l => pIds.includes(l.project_id));
@@ -652,7 +658,7 @@
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td><b>${c.name}</b></td>
+          <td><b>${formatCustomerLabel(c)}</b></td>
           <td>${prjs.map(p => p.name).join('<br>')}</td>
           <td>${cLogs.length} 回</td>
           <td><b>${h.toFixed(1)} h</b></td>
@@ -660,7 +666,6 @@
         cTbody.appendChild(tr);
       });
 
-      // 専門家別
       const eTbody = document.getElementById('report-experts-tbody');
       eTbody.innerHTML = '';
       dbData.experts.forEach(e => {
@@ -683,24 +688,60 @@
       });
     }
 
-    // 3. 顧客マスタ
     function renderClients() {
       const tbody = document.getElementById('clients-tbody');
+      const keyword = (document.getElementById('client-search-input')?.value || '').trim().toLowerCase();
       tbody.innerHTML = '';
-      dbData.clients.forEach(c => {
+
+      const filtered = dbData.customers.filter(c => {
+        if (!keyword) return true;
+        const text = [
+          c.company_name,
+          c.department,
+          c.title,
+          c.contact_name,
+          c.contact_kana,
+          c.email,
+          c.phone,
+          c.mobile,
+          c.business_summary,
+          c.memo
+        ].filter(Boolean).join(' ').toLowerCase();
+        return text.includes(keyword);
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:20px;">該当する共有顧客データがありません。</td></tr>';
+        return;
+      }
+
+      filtered.forEach(c => {
+        const deptTitle = [c.department, c.title].filter(Boolean).join(' / ');
+        const contactInfo = [
+          c.phone ? `固定: ${c.phone}` : '',
+          c.mobile ? `携帯: ${c.mobile}` : '',
+          c.email ? `Mail: ${c.email}` : ''
+        ].filter(Boolean).join('<br>');
+
+        const summary = [c.business_summary, c.memo].filter(Boolean).join(' / ');
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td><b>${c.name}</b></td>
-          <td>${c.industry || '-'}</td>
-          <td>${c.contact_person || '-'}</td>
-          <td>${c.tel || '-'}</td>
-          <td><button class="btn-danger" onclick="deleteClient(${c.id})">削除</button></td>
+          <td>
+            <b>${c.company_name || '-'}</b>
+            ${c.website_url ? `<br><a href="${c.website_url}" target="_blank" rel="noopener noreferrer" style="font-size:11px; color:#4f46e5;">🌐 Webサイト</a>` : ''}
+          </td>
+          <td>
+            <span style="font-size:11px; color:#64748b;">${deptTitle || '-'}</span><br>
+            <b>${c.contact_name || '-'}</b>
+          </td>
+          <td style="font-size:12px;">${contactInfo || '-'}</td>
+          <td style="font-size:12px; color:#475569; max-width:280px;">${summary || '-'}</td>
         `;
         tbody.appendChild(tr);
       });
     }
 
-    // 4. 専門家マスタ
     function renderExperts() {
       const tbody = document.getElementById('experts-tbody');
       tbody.innerHTML = '';
@@ -721,7 +762,6 @@
       document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
     }
 
-    // 案件起票・編集
     function openProjectModal() {
       document.getElementById('modal-project-title').textContent = '新規支援案件の起票';
       document.getElementById('btn-save-project').textContent = 'DBへ保存';
@@ -733,7 +773,7 @@
       document.getElementById('prj-planned-hours').value = '';
 
       const cSel = document.getElementById('prj-client');
-      cSel.innerHTML = dbData.clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+      cSel.innerHTML = dbData.customers.map(c => `<option value="${c.id}">${formatCustomerLabel(c)}</option>`).join('');
 
       const lSel = document.getElementById('prj-leader');
       lSel.innerHTML = dbData.experts.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
@@ -762,7 +802,7 @@
       document.getElementById('prj-planned-hours').value = p.plannedHours !== undefined && p.plannedHours !== null ? p.plannedHours : '';
 
       const cSel = document.getElementById('prj-client');
-      cSel.innerHTML = dbData.clients.map(c => `<option value="${c.id}" ${c.id === p.clientId ? 'selected' : ''}>${c.name}</option>`).join('');
+      cSel.innerHTML = dbData.customers.map(c => `<option value="${c.id}" ${c.id === p.clientId ? 'selected' : ''}>${formatCustomerLabel(c)}</option>`).join('');
 
       const lSel = document.getElementById('prj-leader');
       lSel.innerHTML = dbData.experts.map(e => `<option value="${e.id}" ${e.id === p.leaderId ? 'selected' : ''}>${e.name}</option>`).join('');
@@ -789,7 +829,7 @@
       const plannedHoursVal = document.getElementById('prj-planned-hours').value;
 
       const record = {
-        client_id: Number(document.getElementById('prj-client').value),
+        client_id: document.getElementById('prj-client').value,
         name: document.getElementById('prj-name').value,
         start_date: document.getElementById('prj-start').value,
         end_date: document.getElementById('prj-end').value || null,
@@ -831,12 +871,11 @@
       await fetchAllData();
     }
 
-    // 日報ログモーダル
     function openLogModal(projectId) {
       const p = dbData.projects.find(item => item.id === projectId);
-      const c = dbData.clients.find(item => item.id === p.clientId) || { name: "" };
+      const c = dbData.customers.find(item => item.id === p.clientId);
       document.getElementById('modal-log-title').textContent = p.name;
-      document.getElementById('modal-log-subtitle').textContent = `支援先: ${c.name} | 終了予定: ${p.endDate || '未定'}`;
+      document.getElementById('modal-log-subtitle').textContent = `支援先: ${formatCustomerLabel(c)} | 終了予定: ${p.endDate || '未定'}`;
       document.getElementById('log-p-id').value = projectId;
       document.getElementById('log-date').value = new Date().toISOString().split('T')[0];
       document.getElementById('log-theme').value = '';
@@ -896,34 +935,6 @@
       renderLogHistory(pId);
     }
 
-    // 顧客登録
-    function openClientModal() {
-      document.getElementById('modal-client').style.display = 'flex';
-    }
-    async function handleSaveClient(e) {
-      e.preventDefault();
-      const record = {
-        name: document.getElementById('cli-name').value,
-        industry: document.getElementById('cli-industry').value,
-        contact_person: document.getElementById('cli-contact').value,
-        tel: document.getElementById('cli-tel').value
-      };
-
-      const { error } = await supabaseClient.from('clients').insert([record]);
-      if (error) { alert('顧客の登録に失敗しました: ' + error.message); return; }
-      closeAllModals();
-      await fetchAllData();
-      renderClients();
-    }
-    async function deleteClient(id) {
-      if (!confirm('この顧客を削除しますか？\n※案件で参照されている場合は削除できません。')) return;
-      const { error } = await supabaseClient.from('clients').delete().eq('id', id);
-      if (error) { alert('削除できませんでした: ' + error.message); return; }
-      await fetchAllData();
-      renderClients();
-    }
-
-    // 専門家登録
     function openExpertModal() {
       document.getElementById('modal-expert').style.display = 'flex';
     }
@@ -953,7 +964,6 @@
       renderExperts();
     }
 
-    // CSVエクスポート
     function exportCSV() {
       const filterMonth = document.getElementById('report-month-filter').value;
       const targetLogs = dbData.logs.filter(l => {
@@ -961,12 +971,12 @@
         return l.date.startsWith(filterMonth);
       });
 
-      let csv = "\uFEFF日付,顧客名,案件名,担当専門家,稼働時間,件名,内容\n";
+      let csv = "\uFEFF日付,顧客会社名,顧客担当者,案件名,担当専門家,稼働時間,件名,内容\n";
       targetLogs.forEach(l => {
         const prj = dbData.projects.find(p => p.id === l.project_id) || { name: "", clientId: null };
-        const cli = dbData.clients.find(c => c.id === prj.clientId) || { name: "" };
+        const cust = dbData.customers.find(c => c.id === prj.clientId) || { company_name: "", contact_name: "" };
         const exp = dbData.experts.find(e => e.id === l.expert_id) || { name: "" };
-        csv += `"${l.date}","${cli.name}","${prj.name}","${exp.name}",${l.hours},"${l.title.replace(/"/g, '""')}","${(l.content||'').replace(/"/g, '""')}"\n`;
+        csv += `"${l.date}","${cust.company_name || ''}","${cust.contact_name || ''}","${prj.name}","${exp.name}",${l.hours},"${l.title.replace(/"/g, '""')}","${(l.content||'').replace(/"/g, '""')}"\n`;
       });
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const a = document.createElement('a');
@@ -976,7 +986,6 @@
       a.click();
     }
 
-    // 初期起動（起動・再アクセス時に必ずログイン画面へリセット）
     window.addEventListener('DOMContentLoaded', async () => {
       await resetToLoginScreen();
     });
